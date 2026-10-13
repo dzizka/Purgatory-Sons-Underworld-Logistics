@@ -31,7 +31,9 @@ npm run preview    # lokálny náhľad produkčného buildu
 | E na modrej platforme | služobný výťah na expedíciu / späť |
 | I | sklad a výbava (klik = nasadiť, pravé tlačidlo = skartovať) |
 
-**Expedícia (Oddelenie reklamácií):** WASD pohyb · ľavé tlačidlo Dierovačka (úder na blízko) · pravé tlačidlo Sponkovačka (strela) · Medzera úskok (krátka nezraniteľnosť) · E na výťahu = návrat s korisťou.
+**Expedícia (Oddelenie reklamácií):** každá výprava je **procedurálne generovaná** – miestnosti, chodby, archívy, zasadačky a sklady s korisťou. Po vybavení poschodia sa otvorí **schodisko** (oranžové) o poschodie nižšie: ťažšie, ale štedrejšie. Výťah (modrý) vás kedykoľvek vráti domov s korisťou – smrť znamená, že prepadne všetko z celej výpravy.
+
+**Ovládanie expedície:** WASD pohyb · ľavé tlačidlo Dierovačka (úder na blízko) · pravé tlačidlo Sponkovačka (strela) · Medzera úskok (krátka nezraniteľnosť) · E na výťahu = návrat s korisťou.
 Z nepriateľov padá **korisť** (farebný drahokam = rarita: bežné, byrokratické, legendárne, prekliate) s afixmi ako *„Prokrastinujúca dierovačka z porady, ktorá mohla byť e-mail“*. Vybavenie celej mapy dá garantovaný predmet.
 Nepriatelia pred úderom zastanú a pod nimi sa rozsvieti červený výsek – vtedy uskočte. Smrť = disciplinárne konanie a korisť prepadá. Základňa medzitým vyrába ďalej.
 

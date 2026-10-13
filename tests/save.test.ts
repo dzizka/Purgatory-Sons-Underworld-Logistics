@@ -100,6 +100,26 @@ describe('migrácie', () => {
     expect(r.save.state.inventory).toHaveLength(2);
     expect(r.save.state.equipment.melee).toBe('i-start-melee');
     expect(r.save.state.progress.kills).toBe(0);
+    expect(r.save.state.progress.deepestFloor).toBe(0); // v0 → v1 → v2
+  });
+});
+
+describe('migrácia v1 → v2', () => {
+  it('save v1 bez rekordu poschodia dostane deepestFloor 0', () => {
+    const state = createInitialState(4);
+    const { deepestFloor: _d, ...progressV1 } = state.progress;
+    const r = parseSave(JSON.stringify({ saveVersion: 1, savedAt: 5, state: { ...state, progress: progressV1 } }));
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.migratedFrom).toBe(1);
+    expect(r.save.state.progress.deepestFloor).toBe(0);
+  });
+
+  it('rekord sa zapíše iba pri úspešnom návrate a iba keď je hlbší', () => {
+    const store = new GameStore(createInitialState(1));
+    store.recordExpedition(true, 3, 3);
+    store.recordExpedition(false, 9, 6);
+    store.recordExpedition(true, 1, 2);
+    expect(store.state.progress.deepestFloor).toBe(3);
   });
 });
 

@@ -3,10 +3,10 @@
  * Dlaždica (tx, ty) pokrýva world štvorec [tx - 0.5, tx + 0.5] × [ty - 0.5, ty + 0.5].
  */
 
-export type TileKind = 'floor' | 'wall' | 'pillar' | 'desk' | 'elevator' | 'void';
+export type TileKind = 'floor' | 'wall' | 'pillar' | 'desk' | 'elevator' | 'stairs' | 'void';
 
 export interface PropPlacement {
-  readonly kind: Exclude<TileKind, 'floor' | 'elevator' | 'void'>;
+  readonly kind: Exclude<TileKind, 'floor' | 'elevator' | 'stairs' | 'void'>;
   readonly tx: number;
   readonly ty: number;
 }
@@ -19,6 +19,10 @@ export interface ParsedMap {
   readonly props: readonly PropPlacement[];
   readonly elevators: readonly { readonly tx: number; readonly ty: number }[];
   readonly enemies: readonly { readonly kind: EnemySpawnKind; readonly tx: number; readonly ty: number }[];
+  /** Schodisko o poschodie nižšie (procedurálny dungeon). */
+  readonly stairs: readonly { readonly tx: number; readonly ty: number }[];
+  /** Miesta, kde od začiatku leží korisť (sklad). */
+  readonly lootSpots: readonly { readonly tx: number; readonly ty: number }[];
 }
 
 const LEGEND: Readonly<Record<string, TileKind>> = {
@@ -28,6 +32,8 @@ const LEGEND: Readonly<Record<string, TileKind>> = {
   P: 'pillar',
   D: 'desk',
   X: 'elevator',
+  v: 'stairs',
+  L: 'floor',
   a: 'floor',
   c: 'floor',
   ' ': 'void',
@@ -78,7 +84,7 @@ export function tileVariant(tx: number, ty: number, variants: number): number {
 
 /**
  * ASCII mapa → grid. Riadok = world y, stĺpec = world x.
- * `.` podlaha, `#` stena, `P` stĺp, `D` stôl, `@` spawn, `X` výťah,
+ * `.` podlaha, `#` stena, `P` stĺp, `D` stôl, `@` spawn, `X` výťah, `v` schodisko dole, `L` korisť,
  * `a` / `c` nepriateľ (audítor / compliance officer) na podlahe, medzera = prázdno.
  */
 export function parseMap(rows: readonly string[]): ParsedMap {
@@ -88,6 +94,8 @@ export function parseMap(rows: readonly string[]): ParsedMap {
   const props: PropPlacement[] = [];
   const elevators: { tx: number; ty: number }[] = [];
   const enemies: { kind: EnemySpawnKind; tx: number; ty: number }[] = [];
+  const stairs: { tx: number; ty: number }[] = [];
+  const lootSpots: { tx: number; ty: number }[] = [];
   let spawn: { x: number; y: number } | undefined;
 
   for (let ty = 0; ty < height; ty++) {
@@ -99,6 +107,8 @@ export function parseMap(rows: readonly string[]): ParsedMap {
       tiles.push(kind);
       if (ch === '@') spawn = { x: tx, y: ty };
       if (kind === 'elevator') elevators.push({ tx, ty });
+      if (kind === 'stairs') stairs.push({ tx, ty });
+      if (ch === 'L') lootSpots.push({ tx, ty });
       const enemy = ENEMY_CHARS[ch];
       if (enemy !== undefined) enemies.push({ kind: enemy, tx, ty });
       if (kind === 'wall' || kind === 'pillar' || kind === 'desk') props.push({ kind, tx, ty });
@@ -106,5 +116,17 @@ export function parseMap(rows: readonly string[]): ParsedMap {
   }
 
   if (spawn === undefined) throw new Error('parseMap: mapa nemá spawn (@)');
-  return { grid: new TileGrid(width, height, tiles), spawn, props, elevators, enemies };
+  return { grid: new TileGrid(width, height, tiles), spawn, props, elevators, enemies, stairs, lootSpots };
+}
+
+/**
+ * Je dlaždica na obrazovke viditeľná? V izometrii sa bloky s väčším x + y kreslia pred ňou –
+ * ak niektorý z troch susedov „pred“ dlaždicou je vysoký blok, prekryje ju.
+ */
+export function isVisibleTile(grid: TileGrid, tx: number, ty: number): boolean {
+  const tall = (x: number, y: number): boolean => {
+    const k = grid.get(x, y);
+    return k === 'wall' || k === 'pillar';
+  };
+  return !tall(tx + 1, ty) && !tall(tx, ty + 1) && !tall(tx + 1, ty + 1);
 }

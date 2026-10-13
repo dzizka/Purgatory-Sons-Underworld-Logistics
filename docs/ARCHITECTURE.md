@@ -99,6 +99,7 @@ WorldY = (ScreenY / (TH/2) - ScreenX / (TW/2)) / 2
 │   ├── systems/                  # čistá logika (bez Phaseru)
 │   │   ├── movement/             #   input → velocity, kolízie s gridom
 │   │   ├── combat/               #   zbrane, damage, výseky, projektily, AI nepriateľov, celá simulácia expedície
+│   │   ├── dungeon/              #   generátor procedurálnych poschodí (ASCII → parseMap)
 │   │   ├── loot/                 #   rarity, afixy, generovanie predmetov, názvy so zhodou rodu, výbava → štatistiky
 │   │   ├── base/                 #   budovy, produkčné reťazce, zdroje
 │   │   └── staff/                #   generovanie hriešnikov, traity, tréning, priradenie

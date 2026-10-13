@@ -4,6 +4,7 @@ import { playMusic, toggleMute } from '@/audio/music';
 import { sfx } from '@/audio/sfx';
 import { FLOOR_DEPTH } from '@/config/constants';
 import { screenToWorld, worldToScreen } from '@/core/iso';
+import { floorTheme } from '@/data/dungeon';
 import { ENEMIES } from '@/data/enemies';
 import { PLAYER } from '@/data/player';
 import type { Resources } from '@/data/resources';
@@ -13,18 +14,21 @@ import type { BaseSceneData } from '@/scenes/BaseScene';
 import { session } from '@/state/session';
 import { itemName } from '@/systems/loot/loot';
 import {
+  canDescend,
+  carryOf,
   createExpedition,
+  type ExpeditionCarry,
   type EnemyState,
   type ExpeditionEvent,
   type ExpeditionState,
   leaveExpedition,
   stepExpedition,
 } from '@/systems/combat/expedition';
+import { generateFloor } from '@/systems/dungeon/generate';
 import { facingFromScreen, type Facing } from '@/systems/movement/direction';
 import type { Vec2 } from '@/systems/movement/movement';
 import { IsoMapView } from '@/world/IsoMapView';
 import { IsoSprite } from '@/world/IsoSprite';
-import { COMPLAINTS_DEPT } from '@/world/maps';
 import { parseMap, type TileGrid } from '@/world/TileGrid';
 
 /** Krátke zamrznutie simulácie po zásahu – úder „sedí“. */
@@ -33,8 +37,17 @@ const OVERLAY_DEPTH = 950_000;
 /** Výška letiacej sponky nad zemou (px). */
 const PROJECTILE_Z = 14;
 
+/** Dáta pri štarte scény: nová výprava, alebo zostup o poschodie nižšie. */
+export interface ExpeditionStartData {
+  readonly depth?: number;
+  readonly seed?: number;
+  readonly carry?: ExpeditionCarry;
+}
+
 export type ExpeditionOutcome = {
   readonly result: 'won' | 'lost';
+  /** Najhlbšie poschodie tejto výpravy. */
+  readonly depth: number;
   readonly rewards: Resources;
   readonly kills: number;
   /** Zdvihnutá korisť (pri prehre prepadla – je tu iba na oznámenie). */
@@ -76,26 +89,36 @@ export class ExpeditionScene extends Phaser.Scene {
   private hitStopMs = 0;
   private elevatorTiles = new Set<string>();
   private finished = false;
+  private stairsTiles = new Set<string>();
+  private floorSeed = 0;
 
   constructor() {
     super({ key: 'ExpeditionScene' });
   }
 
-  create(): void {
+  create(data: ExpeditionStartData = {}): void {
     this.finished = false;
     this.hitStopMs = 0;
     this.enemyViews.clear();
     this.projectileViews.clear();
     this.dropViews.clear();
 
-    const map = parseMap(COMPLAINTS_DEPT);
+    const depth = data.depth ?? 1;
+    this.floorSeed = data.seed ?? Math.floor(Math.random() * 2 ** 32);
+    const floor = generateFloor(this.floorSeed, depth);
+    const map = parseMap(floor.rows);
     this.grid = map.grid;
     this.elevatorTiles = new Set(map.elevators.map((e) => `${e.tx},${e.ty}`));
-    this.view = new IsoMapView(this, map, THEMES.complaints);
+    this.stairsTiles = new Set(map.stairs.map((e) => `${e.tx},${e.ty}`));
+    this.view = new IsoMapView(this, map, THEMES[floorTheme(depth)]);
     this.sim = createExpedition(map.spawn, map.enemies, {
       loadout: session.store.loadout(),
-      seed: Math.floor(Math.random() * 2 ** 32),
+      seed: this.floorSeed,
+      depth,
+      lootSpots: map.lootSpots,
+      ...(data.carry !== undefined ? { carry: data.carry } : {}),
     });
+    for (const d of this.sim.drops) this.addDropView(d.id);
 
     registerPunyAnims(this, 'char_player');
     this.playerShadow = new IsoSprite(this, 'fx_shadow', map.spawn, { depthBias: -0.5 });
@@ -142,6 +165,29 @@ export class ExpeditionScene extends Phaser.Scene {
     return this.elevatorTiles.has(`${Math.round(p.x)},${Math.round(p.y)}`);
   }
 
+  /** Stojí manažér na schodisku dole? */
+  get onStairs(): boolean {
+    const p = this.sim.player.pos;
+    return this.stairsTiles.has(`${Math.round(p.x)},${Math.round(p.y)}`);
+  }
+
+  get seed(): number {
+    return this.floorSeed;
+  }
+
+  /** Zostup o poschodie nižšie: nová mapa, korisť a zdravie sa nesú ďalej. */
+  private descend(): void {
+    if (this.finished || !canDescend(this.sim)) return;
+    this.finished = true;
+    session.save();
+    const next: ExpeditionStartData = { depth: this.sim.depth + 1, carry: carryOf(this.sim) };
+    this.cameras.main.fadeOut(300);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.stop('ExpeditionUIScene');
+      this.scene.restart(next);
+    });
+  }
+
   override update(_time: number, delta: number): void {
     const dt = Math.min(delta, 50);
     if (this.hitStopMs > 0) {
@@ -157,9 +203,14 @@ export class ExpeditionScene extends Phaser.Scene {
     this.syncDrops();
     this.view.fadeOccluders(this.player);
 
-    if (!this.finished && this.sim.status === 'active' && this.onElevator && Phaser.Input.Keyboard.JustDown(this.keys.use)) {
-      leaveExpedition(this.sim);
-      this.finish();
+    if (!this.finished && this.sim.status === 'active' && Phaser.Input.Keyboard.JustDown(this.keys.use)) {
+      if (this.onElevator) {
+        leaveExpedition(this.sim);
+        this.finish();
+      } else if (this.onStairs) {
+        if (canDescend(this.sim)) this.descend();
+        else sfx(this, 'click');
+      }
     }
   }
 
@@ -243,13 +294,9 @@ export class ExpeditionScene extends Phaser.Scene {
       case 'cleared':
         this.cameras.main.flash(250, 120, 200, 120);
         break;
-      case 'lootDropped': {
-        const d = this.sim.drops.find((x) => x.id === e.dropId);
-        if (d === undefined) break;
-        const v = new IsoSprite(this, 'fx_loot', { x: d.pos.x, y: d.pos.y, z: 8 }).setTint(RARITY[d.item.rarity].tint);
-        this.dropViews.set(d.id, v);
+      case 'lootDropped':
+        this.addDropView(e.dropId);
         break;
-      }
       case 'lootPicked': {
         sfx(this, 'pickup');
         this.dropViews.get(e.dropId)?.destroy();
@@ -328,6 +375,13 @@ export class ExpeditionScene extends Phaser.Scene {
     }
   }
 
+  private addDropView(dropId: number): void {
+    const d = this.sim.drops.find((x) => x.id === dropId);
+    if (d === undefined || this.dropViews.has(dropId)) return;
+    const v = new IsoSprite(this, 'fx_loot', { x: d.pos.x, y: d.pos.y, z: 8 }).setTint(RARITY[d.item.rarity].tint);
+    this.dropViews.set(d.id, v);
+  }
+
   /** Korisť sa pomaly vznáša, aby si ju hráč všimol. */
   private syncDrops(): void {
     const t = this.sim.timeMs / 300;
@@ -392,6 +446,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const won = this.sim.status === 'won';
     const outcome: ExpeditionOutcome = {
       result: won ? 'won' : 'lost',
+      depth: this.sim.depth,
       rewards: { ...this.sim.rewards },
       kills: this.sim.kills,
       loot: [...this.sim.loot],
@@ -401,7 +456,7 @@ export class ExpeditionScene extends Phaser.Scene {
       store.grant(outcome.rewards);
       store.addLoot(outcome.loot);
     }
-    store.recordExpedition(won, outcome.kills);
+    store.recordExpedition(won, outcome.kills, outcome.depth);
     session.save();
     this.events.emit('finished', outcome);
     this.time.delayedCall(won ? 400 : 2600, () => {

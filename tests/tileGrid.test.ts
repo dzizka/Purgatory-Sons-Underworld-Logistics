@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_ELEVATOR_ARRIVAL, COMPLAINTS_DEPT, PROCESSING_OFFICE } from '@/world/maps';
-import { parseMap, TileGrid, tileVariant } from '@/world/TileGrid';
+import { BASE_ELEVATOR_ARRIVAL, PROCESSING_OFFICE } from '@/world/maps';
+import { isVisibleTile, parseMap, TileGrid, tileVariant } from '@/world/TileGrid';
 
 const MAP = ['####', '#@P#', '#.D#', '####'];
 
@@ -23,6 +23,8 @@ describe('parseMap', () => {
   it('odmietne mapu bez spawnu a neznáme znaky', () => {
     expect(() => parseMap(['###'])).toThrow(/spawn/);
     expect(() => parseMap(['#@?'])).toThrow(/neznámy znak/);
+    expect(parseMap(['#@vL#']).stairs).toEqual([{ tx: 2, ty: 0 }]);
+    expect(parseMap(['#@vL#']).lootSpots).toEqual([{ tx: 3, ty: 0 }]);
   });
 });
 
@@ -84,10 +86,7 @@ describe('parseMap – expedičné značky', () => {
 });
 
 describe('herné mapy', () => {
-  it.each([
-    ['PROCESSING_OFFICE', PROCESSING_OFFICE],
-    ['COMPLAINTS_DEPT', COMPLAINTS_DEPT],
-  ])('%s: každá priechodná dlaždica je dosiahnuteľná zo spawnu a výťah existuje', (_name, rows) => {
+  it.each([['PROCESSING_OFFICE', PROCESSING_OFFICE]])('%s: každá priechodná dlaždica je dosiahnuteľná zo spawnu a výťah existuje', (_name, rows) => {
     const m = parseMap(rows);
     expect(m.elevators.length).toBeGreaterThan(0);
     const seen = new Set<string>([`${m.spawn.x},${m.spawn.y}`]);
@@ -107,6 +106,18 @@ describe('herné mapy', () => {
     for (let y = 0; y < m.grid.height; y++)
       for (let x = 0; x < m.grid.width; x++)
         if (!m.grid.isBlocked(x, y)) expect(seen.has(`${x},${y}`), `(${x}, ${y}) je odrezaná`).toBe(true);
+  });
+
+  it.each([['PROCESSING_OFFICE', PROCESSING_OFFICE]])('%s: výťah nie je schovaný za stenou', (_name, rows) => {
+    const m = parseMap(rows);
+    for (const e of m.elevators) expect(isVisibleTile(m.grid, e.tx, e.ty), `výťah (${e.tx}, ${e.ty})`).toBe(true);
+  });
+
+  it('isVisibleTile: stena „pred“ dlaždicou ju zakryje, stena za ňou nie', () => {
+    const { grid } = parseMap(['######', '#@...#', '#....#', '#.#..#', '######']);
+    expect(isVisibleTile(grid, 1, 1)).toBe(true); // steny sú iba za ňou
+    expect(isVisibleTile(grid, 1, 2)).toBe(false); // stĺp (2,3) je pred ňou
+    expect(isVisibleTile(grid, 4, 3)).toBe(false); // pravá stena
   });
 
   it('návrat z expedície pristane na priechodnej dlaždici', () => {

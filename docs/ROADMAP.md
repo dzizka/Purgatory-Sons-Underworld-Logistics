@@ -110,8 +110,30 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 
 ---
 
+## Fáza 7 – Procedurálne Oddelenie reklamácií ✅
+**Cieľ:** znovuhrateľné expedície s rizikom a odmenou.
+
+- Generátor poschodí (`systems/dungeon/generate.ts`): miestnosti + chodby (minimálna kostra + slučky), typy miestností (štart, východ, archív s pultmi, zasadačka so stĺpmi a stolom, sklad s korisťou), výstup v ASCII formáte pre `parseMap`
+- Hĺbka: viac a silnejších nepriateľov, viac compliance officerov, vyššie odmeny a šťastie pri drope; každé poschodie má vlastný názov a tému dlaždíc
+- Schodisko dole sa otvorí po vybavení poschodia; korisť, suroviny a zdravie sa nesú ďalej, smrť = všetko prepadá; výťah domov na každom poschodí
+- Seed poschodia viditeľný v HUD, rekord najhlbšieho poschodia v save (verzia 2 s migráciou)
+- Výťah na základni presunutý k zadnej stene + pravidlo „výťah/schodisko nesmie byť za stenou“ pre všetky mapy
+
+**Definition of Done**
+- [x] Každé poschodie je iné, ale pre rovnaký seed rovnaké
+- [x] Všetko priechodné je dosiahnuteľné, výťah a schodisko sú vždy viditeľné (test na 600 vygenerovaných poschodiach)
+- [x] Hlbšie poschodia sú merateľne ťažšie a štedrejšie (testy)
+- [x] Zostup prenesie korisť a zdravie; návrat domov pripíše všetko, smrť všetko vezme
+
+## Fáza 8 – Kariéra hriešnikov & vyváženie (plán)
+- Strop úrovne 10; na maxime voľba: **povýšiť na vedúceho** (nepracuje, celá budova +25 %), **dôchodok** (trvalý bonus), alebo nechať pracovať
+- Vyhorenie: dlhá práca bez kávy spomaľuje
+- Vyváženie ekonomiky a offline progresu so stropom úrovne
+
+---
+
 ## Backlog (po MVP)
 - Nové typy hriešnikov a ich odomykanie
-- Viac expedičných máp / procedurálne generované oddelenia, boss „CEO“ (Businessman sprite v `assets-src/`)
+- Boss „CEO“ na každom 5. poschodí (Businessman sprite v `assets-src/`)
 - Vyváženie ekonomiky (offline úrovne hriešnikov rastú rýchlo)
 - Kancelársky nábytok v pixel arte (dnes polovičné kovové bloky)

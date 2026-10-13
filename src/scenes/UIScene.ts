@@ -19,6 +19,7 @@ const TILE_LABEL: Readonly<Record<TileKind, string>> = {
   pillar: 'Blok pekelného kameňa – firemné hodnoty',
   desk: 'Pracovný stôl, model „Večný Open-space“',
   elevator: 'Služobný výťah do Oddelenia reklamácií (E = nastúpiť)',
+  stairs: 'Schodisko',
   void: 'Nič',
 };
 
@@ -173,7 +174,8 @@ export class UIScene extends Phaser.Scene {
       const d = BUILDINGS[type];
       const active = m.kind === 'build' && m.type === type;
       if (!session.store.isUnlocked(type)) {
-        text.setText(`[${i + 1}] ${d.name}\n    zamknuté: ${d.unlock?.hint ?? ''}`).setColor(C.dim);
+        // stĺpec má ~29 znakov – kratšie odsadenie, aby text neprešiel do susedného tlačidla
+        text.setText(`[${i + 1}] ${d.name}\n  zamknuté: ${d.unlock?.hint ?? ''}`).setColor(C.dim);
         return;
       }
       const color = active ? C.accent : canAfford(res, d.cost) ? C.text : C.dim;

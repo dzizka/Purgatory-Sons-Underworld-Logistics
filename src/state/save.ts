@@ -12,7 +12,7 @@ import type { BuildingState, GameState, SinnerState } from '@/state/GameState';
 export const SAVE_KEY = 'purgatory-logistics.save';
 /** Sem sa odloží poškodený save, aby sa dal ručne zachrániť. */
 export const CORRUPT_BACKUP_KEY = 'purgatory-logistics.save.corrupt';
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface Settings {
   /** 0..1 */
@@ -57,6 +57,11 @@ const MIGRATIONS: Readonly<Record<number, (state: Json) => Json>> = {
     equipment: s.equipment ?? { melee: 'i-start-melee', ranged: 'i-start-ranged', trinket: null },
     progress: s.progress ?? { expeditionsWon: 0, expeditionsLost: 0, kills: 0 },
   }),
+  // v1 → v2: procedurálny dungeon, rekord najhlbšieho poschodia
+  1: (s) => {
+    const progress = isObj(s.progress) ? s.progress : {};
+    return { ...s, progress: { ...progress, deepestFloor: progress.deepestFloor ?? 0 } };
+  },
 };
 
 // ---------------------------------------------------------------- validácia
@@ -150,6 +155,7 @@ function validateState(raw: unknown): GameState {
       expeditionsWon: num(progress.expeditionsWon, 'progress.expeditionsWon', 0),
       expeditionsLost: num(progress.expeditionsLost, 'progress.expeditionsLost', 0),
       kills: num(progress.kills, 'progress.kills', 0),
+      deepestFloor: Math.floor(num(progress.deepestFloor, 'progress.deepestFloor', 0)),
     },
     rngSeed: num(s.rngSeed, 'rngSeed') >>> 0,
     nextId: Math.floor(num(s.nextId, 'nextId', 0)),
