@@ -82,6 +82,8 @@ export interface ExpeditionState {
   cleared: boolean;
   status: ExpeditionStatus;
   timeMs: number;
+  /** Dev cheat: smrteľný zásah manažéra len doplní zdravie. */
+  godMode: boolean;
   readonly rng: Rng;
 }
 
@@ -192,6 +194,7 @@ export function createExpedition(
     cleared: enemies.length === 0,
     status: 'active',
     timeMs: 0,
+    godMode: false,
   };
   for (const e of enemies) spawnEnemy(s, e.kind, { x: e.tx, y: e.ty }, false);
   // sklad: korisť leží na zemi od začiatku (so šťastím navyše)
@@ -340,6 +343,7 @@ export function stepExpedition(s: ExpeditionState, input: ExpeditionInput, dtMs:
   s.enemies = s.enemies.filter((e) => e.phase !== 'dead' || e.phaseMs > 0);
 
   // --- koniec ---
+  if (p.hp <= 0 && s.godMode) p.hp = p.maxHp;
   if (p.hp <= 0) {
     s.status = 'lost';
     ev.push({ type: 'playerDied' });

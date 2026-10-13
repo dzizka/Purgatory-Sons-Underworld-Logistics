@@ -47,7 +47,7 @@ Vlastnosti hriešnikov (Workoholik, Prokrastinátor, Mikromanažér, Introvert�
 
 **Kariéra:** na úrovni 10 sa dá hriešnik **povýšiť na vedúceho** (sám nepracuje, budova +25 %) alebo poslať do **dôchodku** (zmizne, celá výroba trvalo +5 %, najviac +50 %) – alebo nech robí ďalej. Pracovníci sa unavujú a sami si berú kávu zo skladu; bez kávy **vyhoria** a robia na polovicu.
 
-S `?debug` v URL je inštancia hry dostupná v konzole ako `window.__game`.
+S `?debug` v URL (alebo v `npm run dev`) je inštancia hry dostupná v konzole ako `window.__game` a **F9** (alebo `` ` ``) otvorí **vývojárske cheat menu**: suroviny, odomknutie všetkého, hriešnici na úroveň 10, únava, legendárne/prekliate predmety, 1 h offline, nesmrteľnosť, skok na poschodie 1/4/5/10, plné zdravie a „zabiť všetkých“ v expedícii. Položky 1–9 aj cez Alt+číslo.
 
 ## Ukladanie
 

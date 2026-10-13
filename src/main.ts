@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '@/config/constants';
 import { BaseScene } from '@/scenes/BaseScene';
 import { BootScene } from '@/scenes/BootScene';
+import { DevScene } from '@/scenes/DevScene';
 import { ExpeditionScene } from '@/scenes/ExpeditionScene';
 import { ExpeditionUIScene } from '@/scenes/ExpeditionUIScene';
 import { MenuScene } from '@/scenes/MenuScene';
@@ -57,9 +58,10 @@ declare global {
   }
 }
 
-// Debug handle pre konzolu a smoke testy: v dev móde alebo s ?debug v URL.
+// Debug handle pre konzolu a smoke testy + cheat menu (F9): v dev móde alebo s ?debug v URL.
 if (import.meta.env.DEV || new URLSearchParams(window.location.search).has('debug')) {
   window.__game = game;
+  game.scene.add('DevScene', DevScene, true);
 }
 
 // HMR: pri hot-reloade zničíme starú inštanciu, inak by sa canvasy kopili.
