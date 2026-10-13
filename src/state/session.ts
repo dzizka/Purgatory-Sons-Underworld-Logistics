@@ -1,5 +1,6 @@
 import { EventBus } from '@/core/EventBus';
 import type { BuildingType } from '@/data/buildings';
+import type { Resources } from '@/data/resources';
 import { createInitialState, GameStore } from '@/state/store';
 
 /** Čo práve robí kurzor v hernom svete. */
@@ -27,6 +28,8 @@ class Session {
   selectedBuilding: string | null = null;
   /** `downTime` posledného kliknutia, ktoré spracovalo UI – herný svet ho ignoruje. */
   uiPointerDownTime = -1;
+  /** Stav surovín pri odchode na expedíciu – na súhrn „kým ste boli preč“. */
+  departureResources: Resources | null = null;
 
   get mode(): UiMode {
     return this.currentMode;

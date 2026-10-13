@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BASE_ELEVATOR_ARRIVAL, COMPLAINTS_DEPT, PROCESSING_OFFICE } from '@/world/maps';
 import { parseMap, TileGrid, tileVariant } from '@/world/TileGrid';
 
 const MAP = ['####', '#@P#', '#.D#', '####'];
@@ -21,7 +22,7 @@ describe('parseMap', () => {
 
   it('odmietne mapu bez spawnu a neznáme znaky', () => {
     expect(() => parseMap(['###'])).toThrow(/spawn/);
-    expect(() => parseMap(['#@X'])).toThrow(/neznámy znak/);
+    expect(() => parseMap(['#@?'])).toThrow(/neznámy znak/);
   });
 });
 
@@ -65,5 +66,51 @@ describe('tileVariant', () => {
 
   it('jeden variant = vždy 0', () => {
     expect(tileVariant(5, 9, 1)).toBe(0);
+  });
+});
+
+describe('parseMap – expedičné značky', () => {
+  it('nájde výťahy a nepriateľov; obe sú priechodné', () => {
+    const m = parseMap(['#####', '#@aX#', '#c..#', '#####']);
+    expect(m.elevators).toEqual([{ tx: 3, ty: 1 }]);
+    expect(m.enemies).toEqual([
+      { kind: 'auditor', tx: 2, ty: 1 },
+      { kind: 'compliance', tx: 1, ty: 2 },
+    ]);
+    expect(m.grid.isBlocked(3, 1)).toBe(false);
+    expect(m.grid.get(2, 1)).toBe('floor');
+    expect(m.grid.get(3, 1)).toBe('elevator');
+  });
+});
+
+describe('herné mapy', () => {
+  it.each([
+    ['PROCESSING_OFFICE', PROCESSING_OFFICE],
+    ['COMPLAINTS_DEPT', COMPLAINTS_DEPT],
+  ])('%s: každá priechodná dlaždica je dosiahnuteľná zo spawnu a výťah existuje', (_name, rows) => {
+    const m = parseMap(rows);
+    expect(m.elevators.length).toBeGreaterThan(0);
+    const seen = new Set<string>([`${m.spawn.x},${m.spawn.y}`]);
+    const queue = [m.spawn];
+    while (queue.length > 0) {
+      const c = queue.pop();
+      if (c === undefined) break;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const n = { x: c.x + dx, y: c.y + dy };
+        const k = `${n.x},${n.y}`;
+        if (!seen.has(k) && !m.grid.isBlocked(n.x, n.y)) {
+          seen.add(k);
+          queue.push(n);
+        }
+      }
+    }
+    for (let y = 0; y < m.grid.height; y++)
+      for (let x = 0; x < m.grid.width; x++)
+        if (!m.grid.isBlocked(x, y)) expect(seen.has(`${x},${y}`), `(${x}, ${y}) je odrezaná`).toBe(true);
+  });
+
+  it('návrat z expedície pristane na priechodnej dlaždici', () => {
+    const { grid } = parseMap(PROCESSING_OFFICE);
+    expect(grid.isBlocked(BASE_ELEVATOR_ARRIVAL.x, BASE_ELEVATOR_ARRIVAL.y)).toBe(false);
   });
 });

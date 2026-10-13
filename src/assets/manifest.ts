@@ -7,6 +7,7 @@
 
 import { TILE_HEIGHT } from '@/config/constants';
 import type { BuildingType } from '@/data/buildings';
+import type { EnemyKind } from '@/data/enemies';
 
 export type PlaceholderSpec =
   | { readonly kind: 'tile'; readonly fill: number; readonly stroke: number }
@@ -21,7 +22,8 @@ export type PlaceholderSpec =
       readonly right: number;
     }
   | { readonly kind: 'capsule'; readonly width: number; readonly height: number; readonly fill: number; readonly outline: number }
-  | { readonly kind: 'shadow'; readonly width: number; readonly height: number };
+  | { readonly kind: 'shadow'; readonly width: number; readonly height: number }
+  | { readonly kind: 'rect'; readonly width: number; readonly height: number; readonly fill: number };
 
 /** Mriežka snímok v sprite sheete. */
 export interface SheetSpec {
@@ -74,12 +76,29 @@ export const ASSETS = {
     origin: { x: 0.5, y: 0.5 },
     placeholder: { kind: 'tile', fill: 0x3a1f2b, stroke: 0x4d2837 },
   },
+  tile_floor_complaints: {
+    url: 'assets/tiles/floor_complaints.png',
+    sheet: { frameWidth: 64, frameHeight: 32, frames: 4 },
+    origin: { x: 0.5, y: 0.5 },
+    placeholder: { kind: 'tile', fill: 0x4a1418, stroke: 0x5c1c20 },
+  },
+  tile_elevator: {
+    url: 'assets/tiles/elevator.png',
+    origin: { x: 0.5, y: 0.5 },
+    placeholder: { kind: 'tile', fill: 0x1f4fd0, stroke: 0x6fa0ff },
+  },
   tile_highlight: { origin: { x: 0.5, y: 0.5 }, placeholder: { kind: 'outline', color: 0xe8a33d } },
   block_wall: {
     url: 'assets/tiles/wall_brick_dark.png',
     sheet: SOUP_BLOCK_SHEET,
     origin: { x: 0.5, y: BLOCK_ORIGIN_Y(32) },
     placeholder: { kind: 'block', height: 32, footprint: 1, top: 0x6b2f3f, left: 0x4a1f2c, right: 0x3a1822 },
+  },
+  block_wall_red: {
+    url: 'assets/tiles/wall_pebble_red.png',
+    sheet: SOUP_BLOCK_SHEET,
+    origin: { x: 0.5, y: BLOCK_ORIGIN_Y(32) },
+    placeholder: { kind: 'block', height: 32, footprint: 1, top: 0xa04040, left: 0x702a2a, right: 0x561f1f },
   },
   block_pillar: {
     url: 'assets/tiles/block_hell.png',
@@ -100,12 +119,16 @@ export const ASSETS = {
   char_sinner_1: punySheet('assets/sprites/sinner_1.png', 0x6a9a3a),
   char_sinner_2: punySheet('assets/sprites/sinner_2.png', 0x9a4a3a),
   char_sinner_3: punySheet('assets/sprites/sinner_3.png', 0xb53f4a),
+  char_enemy_auditor: punySheet('assets/sprites/enemy_auditor.png', 0x5a8a3a),
+  char_enemy_compliance: punySheet('assets/sprites/enemy_compliance.png', 0xa03030),
   bld_intake: buildingBlock('assets/buildings/intake.png', 0x2a2a2a, 0x1a1a1a, 0x101010),
   bld_coffee: buildingBlock('assets/buildings/coffee.png', 0x9a5a2a, 0x7a421c, 0x5c3214),
   bld_copier: buildingBlock('assets/buildings/copier.png', 0x6a5a55, 0x4a3e3a, 0x3a302c),
   bld_torture: buildingBlock('assets/buildings/torture.png', 0xc02030, 0x901820, 0x701018),
   bld_training: buildingBlock('assets/buildings/training.png', 0xd8d0b0, 0xb0a888, 0x908870),
   fx_shadow: { origin: { x: 0.5, y: 0.5 }, placeholder: { kind: 'shadow', width: 22, height: 10 } },
+  /** Sponka zo sponkovačky – generovaná, je to pár pixelov. */
+  fx_staple: { origin: { x: 0.5, y: 0.5 }, placeholder: { kind: 'rect', width: 7, height: 3, fill: 0xd8d8e0 } },
 } as const satisfies Record<string, AssetEntry>;
 
 export type AssetKey = keyof typeof ASSETS;
@@ -119,6 +142,34 @@ export const BUILDING_TEXTURE = {
   torture: 'bld_torture',
   training: 'bld_training',
 } as const satisfies Record<BuildingType, AssetKey>;
+
+export const ENEMY_TEXTURE = {
+  auditor: 'char_enemy_auditor',
+  compliance: 'char_enemy_compliance',
+} as const satisfies Record<EnemyKind, AssetKey>;
+
+/** Sada textúr pre jednu mapu. */
+export interface MapTheme {
+  readonly floor: AssetKey;
+  readonly wall: AssetKey;
+  readonly pillar: AssetKey;
+  readonly desk: AssetKey;
+  readonly elevator: AssetKey;
+  /** Stmavenie podlahy, aby steny a postavy vynikli. */
+  readonly floorTint?: number;
+}
+
+export const THEMES = {
+  office: { floor: 'tile_floor', wall: 'block_wall', pillar: 'block_pillar', desk: 'block_desk', elevator: 'tile_elevator' },
+  complaints: {
+    floor: 'tile_floor_complaints',
+    wall: 'block_wall_red',
+    pillar: 'block_pillar',
+    desk: 'block_desk',
+    elevator: 'tile_elevator',
+    floorTint: 0x6e6e6e,
+  },
+} as const satisfies Record<string, MapTheme>;
 
 export const SINNER_TEXTURES = ['char_sinner_0', 'char_sinner_1', 'char_sinner_2', 'char_sinner_3'] as const satisfies readonly AssetKey[];
 
@@ -138,6 +189,7 @@ export interface AudioEntry {
 
 export const AUDIO = {
   music_base: { url: 'assets/audio/music_base.ogg', volume: 0.35 },
+  music_expedition: { url: 'assets/audio/music_expedition.ogg', volume: 0.4 },
 } as const satisfies Record<string, AudioEntry>;
 
 export type AudioKey = keyof typeof AUDIO;

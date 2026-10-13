@@ -3,18 +3,22 @@
  * Dlaždica (tx, ty) pokrýva world štvorec [tx - 0.5, tx + 0.5] × [ty - 0.5, ty + 0.5].
  */
 
-export type TileKind = 'floor' | 'wall' | 'pillar' | 'desk' | 'void';
+export type TileKind = 'floor' | 'wall' | 'pillar' | 'desk' | 'elevator' | 'void';
 
 export interface PropPlacement {
-  readonly kind: Exclude<TileKind, 'floor' | 'void'>;
+  readonly kind: Exclude<TileKind, 'floor' | 'elevator' | 'void'>;
   readonly tx: number;
   readonly ty: number;
 }
+
+export type EnemySpawnKind = 'auditor' | 'compliance';
 
 export interface ParsedMap {
   readonly grid: TileGrid;
   readonly spawn: { readonly x: number; readonly y: number };
   readonly props: readonly PropPlacement[];
+  readonly elevators: readonly { readonly tx: number; readonly ty: number }[];
+  readonly enemies: readonly { readonly kind: EnemySpawnKind; readonly tx: number; readonly ty: number }[];
 }
 
 const LEGEND: Readonly<Record<string, TileKind>> = {
@@ -23,8 +27,13 @@ const LEGEND: Readonly<Record<string, TileKind>> = {
   '#': 'wall',
   P: 'pillar',
   D: 'desk',
+  X: 'elevator',
+  a: 'floor',
+  c: 'floor',
   ' ': 'void',
 };
+
+const ENEMY_CHARS: Readonly<Record<string, EnemySpawnKind>> = { a: 'auditor', c: 'compliance' };
 
 const BLOCKING: ReadonlySet<TileKind> = new Set<TileKind>(['wall', 'pillar', 'desk', 'void']);
 
@@ -69,13 +78,16 @@ export function tileVariant(tx: number, ty: number, variants: number): number {
 
 /**
  * ASCII mapa → grid. Riadok = world y, stĺpec = world x.
- * `.` podlaha, `#` stena, `P` stĺp, `D` stôl, `@` spawn, medzera = prázdno.
+ * `.` podlaha, `#` stena, `P` stĺp, `D` stôl, `@` spawn, `X` výťah,
+ * `a` / `c` nepriateľ (audítor / compliance officer) na podlahe, medzera = prázdno.
  */
 export function parseMap(rows: readonly string[]): ParsedMap {
   const height = rows.length;
   const width = Math.max(0, ...rows.map((r) => r.length));
   const tiles: TileKind[] = [];
   const props: PropPlacement[] = [];
+  const elevators: { tx: number; ty: number }[] = [];
+  const enemies: { kind: EnemySpawnKind; tx: number; ty: number }[] = [];
   let spawn: { x: number; y: number } | undefined;
 
   for (let ty = 0; ty < height; ty++) {
@@ -86,10 +98,13 @@ export function parseMap(rows: readonly string[]): ParsedMap {
       if (kind === undefined) throw new Error(`parseMap: neznámy znak '${ch}' na (${tx}, ${ty})`);
       tiles.push(kind);
       if (ch === '@') spawn = { x: tx, y: ty };
+      if (kind === 'elevator') elevators.push({ tx, ty });
+      const enemy = ENEMY_CHARS[ch];
+      if (enemy !== undefined) enemies.push({ kind: enemy, tx, ty });
       if (kind === 'wall' || kind === 'pillar' || kind === 'desk') props.push({ kind, tx, ty });
     }
   }
 
   if (spawn === undefined) throw new Error('parseMap: mapa nemá spawn (@)');
-  return { grid: new TileGrid(width, height, tiles), spawn, props };
+  return { grid: new TileGrid(width, height, tiles), spawn, props, elevators, enemies };
 }

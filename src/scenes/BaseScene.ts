@@ -3,6 +3,8 @@ import { AUDIO } from '@/assets/manifest';
 import { FLOOR_DEPTH } from '@/config/constants';
 import { screenToWorld, worldToScreen } from '@/core/iso';
 import { BUILDINGS } from '@/data/buildings';
+import type { ExpeditionOutcome } from '@/scenes/ExpeditionScene';
+import { formatAmounts, RESOURCE_IDS, type ResourceAmounts } from '@/data/resources';
 import { Player } from '@/entities/Player';
 import { SinnerView } from '@/entities/SinnerView';
 import type { BuildingState } from '@/state/GameState';
@@ -12,7 +14,7 @@ import { workerSlots } from '@/systems/base/slots';
 import type { CollisionGrid } from '@/systems/movement/movement';
 import { BuildingView } from '@/world/BuildingView';
 import { IsoMapView } from '@/world/IsoMapView';
-import { inLounge, LOUNGE_SPOTS, PROCESSING_OFFICE } from '@/world/maps';
+import { BASE_ELEVATOR_ARRIVAL, inLounge, LOUNGE_SPOTS, PROCESSING_OFFICE } from '@/world/maps';
 import { parseMap, TileGrid, type TileKind } from '@/world/TileGrid';
 
 export const BASE_EVENTS = {
@@ -28,6 +30,12 @@ export interface TileInfo {
   readonly buildingId: string | null;
 }
 
+/** Dáta pri štarte scény – návrat z expedície pristane pri výťahu. */
+export interface BaseSceneData {
+  readonly from?: 'expedition';
+  readonly outcome?: ExpeditionOutcome;
+}
+
 const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 3;
 const HIGHLIGHT_OK = 0x7dff7d;
@@ -38,6 +46,7 @@ interface MoveKeys {
   readonly down: Phaser.Input.Keyboard.Key[];
   readonly left: Phaser.Input.Keyboard.Key[];
   readonly right: Phaser.Input.Keyboard.Key[];
+  readonly use: Phaser.Input.Keyboard.Key;
 }
 
 /** Základňa: kancelária, po ktorej chodí manažér, stavia budovy a prideľuje hriešnikov. */
@@ -51,14 +60,21 @@ export class BaseScene extends Phaser.Scene {
   private readonly buildingViews = new Map<string, BuildingView>();
   private readonly sinnerViews = new Map<string, SinnerView>();
   private hoverTile: { tx: number; ty: number } | null = null;
+  private elevatorTiles = new Set<string>();
+  private wasOnElevator = false;
+  private departing = false;
 
   constructor() {
     super({ key: 'BaseScene' });
   }
 
-  create(): void {
+  create(data: BaseSceneData = {}): void {
+    this.buildingViews.clear();
+    this.sinnerViews.clear();
+    this.departing = false;
     const map = parseMap(PROCESSING_OFFICE);
     this.grid = map.grid;
+    this.elevatorTiles = new Set(map.elevators.map((e) => `${e.tx},${e.ty}`));
     const { store } = session;
     // Budovy sú prekážky rovnako ako steny.
     this.collision = {
@@ -69,7 +85,9 @@ export class BaseScene extends Phaser.Scene {
     // tesne nad podlahou, pod všetkými Y-sortovanými objektmi
     this.highlight = this.add.image(0, 0, 'tile_highlight').setDepth(FLOOR_DEPTH + 1).setVisible(false);
 
-    this.player = new Player(this, this.collision, map.spawn);
+    const back = data.from === 'expedition';
+    this.player = new Player(this, this.collision, back ? BASE_ELEVATOR_ARRIVAL : map.spawn);
+    this.wasOnElevator = false;
 
     const cam = this.cameras.main;
     cam.setBounds(this.view.bounds.x, this.view.bounds.y, this.view.bounds.width, this.view.bounds.height);
@@ -98,6 +116,57 @@ export class BaseScene extends Phaser.Scene {
     this.keys = this.createKeys();
     this.bindPointer();
     this.startMusic();
+    this.scene.launch('UIScene');
+    this.cameras.main.fadeIn(250);
+    const outcome = data.outcome;
+    if (back && outcome !== undefined) this.time.delayedCall(400, () => this.reportReturn(outcome));
+  }
+
+  /** Výsledok expedície + Zeigarnik v praxi: čo základňa vyrobila, kým bol manažér preč. */
+  private reportReturn(outcome: ExpeditionOutcome): void {
+    const { events } = session.store;
+    if (outcome.result === 'won') {
+      events.emit('notice', {
+        text: `Expedícia ukončená. Vybavené reklamácie: ${outcome.kills}. Odmena: ${formatAmounts(outcome.rewards)}.`,
+        tone: 'info',
+      });
+    } else {
+      events.emit('notice', {
+        text: `Disciplinárne konanie. Korisť (${formatAmounts(outcome.rewards)}) skonfiškovaná v prospech vedenia.`,
+        tone: 'warn',
+      });
+    }
+    const before = session.departureResources;
+    session.departureResources = null;
+    if (before === null) return;
+    const granted: ResourceAmounts = outcome.result === 'won' ? outcome.rewards : {};
+    const now = session.store.state.resources;
+    const produced: ResourceAmounts = {};
+    for (const id of RESOURCE_IDS) {
+      const d = Math.floor(now[id] - before[id] - (granted[id] ?? 0));
+      if (d > 0) produced[id] = d;
+    }
+    if (Object.keys(produced).length > 0) {
+      events.emit('notice', { text: `Kým ste boli preč, základňa vyrobila: ${formatAmounts(produced)}.`, tone: 'info' });
+    }
+  }
+
+  private get onElevator(): boolean {
+    const p = this.player.position;
+    return this.elevatorTiles.has(`${Math.round(p.x)},${Math.round(p.y)}`);
+  }
+
+  private depart(): void {
+    if (this.departing) return;
+    this.departing = true;
+    session.resetMode();
+    session.selectBuilding(null);
+    session.departureResources = { ...session.store.state.resources };
+    this.cameras.main.fadeOut(300);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.stop('UIScene');
+      this.scene.start('ExpeditionScene');
+    });
   }
 
   override update(_time: number, delta: number): void {
@@ -106,8 +175,14 @@ export class BaseScene extends Phaser.Scene {
       x: held(this.keys.right) - held(this.keys.left),
       y: held(this.keys.down) - held(this.keys.up),
     };
-    this.player.update(delta, dir);
+    if (!this.departing) this.player.update(delta, dir);
     this.view.fadeOccluders(this.player.sprite);
+    const on = this.onElevator;
+    if (on && !this.wasOnElevator) {
+      session.store.events.emit('notice', { text: 'Služobný výťah do Oddelenia reklamácií. E = nastúpiť.', tone: 'info' });
+    }
+    this.wasOnElevator = on;
+    if (on && Phaser.Input.Keyboard.JustDown(this.keys.use)) this.depart();
     for (const v of this.buildingViews.values()) v.update(v.building.id === session.selectedBuilding);
     this.updateHighlight();
   }
@@ -238,6 +313,7 @@ export class BaseScene extends Phaser.Scene {
       down: add(K.S, K.DOWN),
       left: add(K.A, K.LEFT),
       right: add(K.D, K.RIGHT),
+      use: kb.addKey(K.E),
     };
   }
 

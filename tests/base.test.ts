@@ -215,3 +215,15 @@ describe('GameStore príkazy', () => {
     expect(s.timeMs).toBe(1234);
   });
 });
+
+describe('GameStore.grant', () => {
+  it('pripíše suroviny a ohlási zmenu', () => {
+    const store = freshStore();
+    let calls = 0;
+    store.events.on('resourcesChanged', () => calls++);
+    store.grant({ souls: 2, sulfur: 15 });
+    expect(store.state.resources.souls).toBe(52);
+    expect(store.state.resources.sulfur).toBe(515);
+    expect(calls).toBe(1);
+  });
+});

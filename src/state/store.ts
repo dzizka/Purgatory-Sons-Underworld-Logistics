@@ -1,7 +1,7 @@
 import { EventBus } from '@/core/EventBus';
 import { Rng } from '@/core/rng';
 import { BUILDINGS, type BuildingType } from '@/data/buildings';
-import { canAfford, formatAmounts, spend, type Resources } from '@/data/resources';
+import { canAfford, formatAmounts, gain, spend, type ResourceAmounts, type Resources } from '@/data/resources';
 import type { BuildingState, GameState, SinnerState } from '@/state/GameState';
 import { tickProduction, workersOf } from '@/systems/base/production';
 import { generateSinner, levelFromXp } from '@/systems/staff/sinners';
@@ -72,6 +72,12 @@ export class GameStore {
         });
       }
     }
+    this.events.emit('resourcesChanged', this.state.resources);
+  }
+
+  /** Pripíše suroviny (napr. odmeny z expedície). */
+  grant(amount: ResourceAmounts): void {
+    gain(this.state.resources, amount);
     this.events.emit('resourcesChanged', this.state.resources);
   }
 

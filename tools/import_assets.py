@@ -76,6 +76,9 @@ BUILDING_BLOCKS = {
     "training": ("Church", 0),
 }
 
+# nepriatelia na expedíciách
+ENEMY_SHEETS = {"auditor": "Orc-Grunt", "compliance": "Orc-Soldier-Red"}
+
 # vzhľady hriešnikov (index = SinnerState.look)
 SINNER_SHEETS = ["Human-Worker-Cyan", "Orc-Peon-Cyan", "Orc-Peon-Red", "Mage-Red"]
 
@@ -106,7 +109,15 @@ def main() -> None:
     for i, sheet in enumerate(SINNER_SHEETS):
         shutil.copy(puny / f"{sheet}.png", OUT / "sprites" / f"sinner_{i}.png")
 
+    # Oddelenie reklamácií (expedícia)
+    floor_row(soup / "Floors" / "ISS_Floor_Rough_Red-64x32.png", 0).save(OUT / "tiles" / "floor_complaints.png")
+    full_blocks(soup / "Walls" / "Block" / "ISS_Block_Pebble_Red-64x64.png", 0).save(OUT / "tiles" / "wall_pebble_red.png")
+    floor_row(soup / "Floors" / "ISS_Floor_Tutorial_Pad-64x32.png", 0).save(OUT / "tiles" / "elevator.png")
+    for name, sheet in ENEMY_SHEETS.items():
+        shutil.copy(puny / f"{sheet}.png", OUT / "sprites" / f"enemy_{name}.png")
+
     shutil.copy(MUSIC_SRC / "Searching.ogg", OUT / "audio" / "music_base.ogg")
+    shutil.copy(MUSIC_SRC / "Insistent.ogg", OUT / "audio" / "music_expedition.ogg")
 
     for f in sorted(OUT.rglob("*.*")):
         print(f.relative_to(OUT), Image.open(f).size if f.suffix == ".png" else f"{f.stat().st_size // 1024} kB")

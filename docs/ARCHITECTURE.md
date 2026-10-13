@@ -83,7 +83,8 @@ WorldY = (ScreenY / (TH/2) - ScreenX / (TW/2)) / 2
 │   ├── scenes/
 │   │   ├── BootScene.ts          # preload + placeholdery
 │   │   ├── BaseScene.ts          # základňa (manažment)
-│   │   ├── ExpeditionScene.ts    # ARPG expedícia
+│   │   ├── ExpeditionScene.ts    # ARPG expedícia (zobrazenie + vstup, logika v systems/combat)
+│   │   ├── ExpeditionUIScene.ts  # HUD expedície
 │   │   └── UIScene.ts            # HUD overlay (beží paralelne)
 │   ├── world/                    # renderovacia vrstva sveta (Phaser)
 │   │   ├── IsoMap.ts             # dlaždicová mapa, pathfinding grid
@@ -95,7 +96,7 @@ WorldY = (ScreenY / (TH/2) - ScreenX / (TW/2)) / 2
 │   │   └── Enemy.ts
 │   ├── systems/                  # čistá logika (bez Phaseru)
 │   │   ├── movement/             #   input → velocity, kolízie s gridom
-│   │   ├── combat/               #   zbrane, damage, hitboxy, AI nepriateľov
+│   │   ├── combat/               #   zbrane, damage, výseky, projektily, AI nepriateľov, celá simulácia expedície
 │   │   ├── loot/                 #   tabuľky lootu, afixy („Prokrastinujúci“, „S výpoveďou“)
 │   │   ├── base/                 #   budovy, produkčné reťazce, zdroje
 │   │   └── staff/                #   generovanie hriešnikov, traity, tréning, priradenie

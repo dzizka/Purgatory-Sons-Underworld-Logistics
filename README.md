@@ -27,6 +27,10 @@ npm run preview    # lokálny náhľad produkčného buildu
 | klik na budovu | detail: stav, recept, efektivita pracovníkov |
 | Esc / pravé tlačidlo | zrušiť režim |
 | M | hudba on/off |
+| E na modrej platforme | služobný výťah na expedíciu / späť |
+
+**Expedícia (Oddelenie reklamácií):** WASD pohyb · ľavé tlačidlo Dierovačka (úder na blízko) · pravé tlačidlo Sponkovačka (strela) · Medzera úskok (krátka nezraniteľnosť) · E na výťahu = návrat s korisťou.
+Nepriatelia pred úderom zastanú a pod nimi sa rozsvieti červený výsek – vtedy uskočte. Smrť = disciplinárne konanie a korisť prepadá. Základňa medzitým vyrába ďalej.
 
 **Ekonomika:** Podateľňa → Duše · Kávovar → Káva · Kopírka: Duša → 3 Formuláre · Mučiareň: Duša + 2 Formuláre + Káva → 6 Síry · Školiaca miestnosť: Káva → XP.
 Vlastnosti hriešnikov (Workoholik, Prokrastinátor, Mikromanažér, Introvert…) menia výkon; skúsenosti zvyšujú úroveň (+10 % / level).
