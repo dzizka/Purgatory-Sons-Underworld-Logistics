@@ -34,6 +34,8 @@ export interface GameEvents {
   sinnerHired: SinnerState;
   sinnerAssigned: { sinner: SinnerState; building: BuildingState | null };
   levelUp: SinnerState;
+  /** Hriešnik si práve vzal kávu zo skladu (kozmetické – animácia prestávky). */
+  coffeeBreak: SinnerState;
   /** Povýšenie na vedúceho. */
   careerChanged: SinnerState;
   sinnerRetired: SinnerState;
@@ -105,6 +107,7 @@ export class GameStore {
       const who = others.length === 0 ? `${first.name} vyhorel` : `${first.name} a ďalší (${others.length}) vyhoreli`;
       this.events.emit('notice', { text: `${who}. Bez kávy pracujú na polovicu – postavte Kávovar.`, tone: 'warn' });
     }
+    for (const s of fatigue.drinkers) this.events.emit('coffeeBreak', s);
     if (cycles.length === 0 && fatigue.coffeeBreaks === 0) return;
     if (cycles.length > 0) {
       const produced: ResourceAmounts = {};

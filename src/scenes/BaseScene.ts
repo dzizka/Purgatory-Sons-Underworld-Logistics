@@ -14,10 +14,12 @@ import { session } from '@/state/session';
 import { leadOf, workersOf } from '@/systems/base/production';
 import { itemName } from '@/systems/loot/loot';
 import { workerSlots } from '@/systems/base/slots';
-import type { CollisionGrid } from '@/systems/movement/movement';
+import type { CollisionGrid, Vec2 } from '@/systems/movement/movement';
+import { BaseLife } from '@/scenes/base/BaseLife';
 import { BuildingView } from '@/world/BuildingView';
 import { IsoMapView } from '@/world/IsoMapView';
-import { BASE_ELEVATOR_ARRIVAL, inLounge, LOUNGE_SPOTS, PROCESSING_OFFICE } from '@/world/maps';
+import { BASE_DECOR, BASE_ELEVATOR_ARRIVAL, DECOR, inLounge, LOUNGE_SPOTS, PROCESSING_OFFICE } from '@/world/maps';
+import { IsoSprite } from '@/world/IsoSprite';
 import { parseMap, TileGrid, type TileKind } from '@/world/TileGrid';
 
 export const BASE_EVENTS = {
@@ -66,6 +68,8 @@ export class BaseScene extends Phaser.Scene {
   private elevatorTiles = new Set<string>();
   private wasOnElevator = false;
   private departing = false;
+  private life!: BaseLife;
+  private decorTiles = new Set<string>();
 
   constructor() {
     super({ key: 'BaseScene' });
@@ -80,10 +84,15 @@ export class BaseScene extends Phaser.Scene {
     this.elevatorTiles = new Set(map.elevators.map((e) => `${e.tx},${e.ty}`));
     const { store } = session;
     // Budovy sú prekážky rovnako ako steny.
+    // staré savy mohli mať budovu tam, kde je dnes dekorácia – budova má prednosť
+    const decorItems = BASE_DECOR.filter((d) => store.buildingAt(d.tx, d.ty) === undefined);
+    const decor = new Set(decorItems.map((d) => `${d.tx},${d.ty}`));
+    this.decorTiles = decor;
     this.collision = {
-      isBlocked: (tx, ty) => this.grid.isBlocked(tx, ty) || store.buildingAt(tx, ty) !== undefined,
+      isBlocked: (tx, ty) => this.grid.isBlocked(tx, ty) || decor.has(`${tx},${ty}`) || store.buildingAt(tx, ty) !== undefined,
     };
     this.view = new IsoMapView(this, map);
+    for (const d of decorItems) new IsoSprite(this, 'deco_office', { x: d.tx, y: d.ty }, { frame: DECOR[d.kind] });
 
     // tesne nad podlahou, pod všetkými Y-sortovanými objektmi
     this.highlight = this.add.image(0, 0, 'tile_highlight').setDepth(FLOOR_DEPTH + 1).setVisible(false);
@@ -125,6 +134,7 @@ export class BaseScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offs.forEach((off) => off()));
 
     this.keys = this.createKeys();
+    this.life = new BaseLife(this);
     this.bindPointer();
     this.startMusic();
     this.scene.launch('UIScene');
@@ -199,6 +209,7 @@ export class BaseScene extends Phaser.Scene {
       y: held(this.keys.down) - held(this.keys.up),
     };
     if (!this.departing) this.player.update(delta, dir);
+    this.life.update(delta);
     this.view.fadeOccluders(this.player.sprite);
     const on = this.onElevator;
     if (on && !this.wasOnElevator) {
@@ -236,26 +247,59 @@ export class BaseScene extends Phaser.Scene {
     return v;
   }
 
+  /** Kde hriešnik patrí: miesto pri budove (alebo v čakárni), kam sa pozerá a či pracuje. */
+  homeOf(sinnerId: string): { pos: Vec2; lookAt: Vec2 | null; working: boolean } | undefined {
+    const { state } = session.store;
+    const s = session.store.sinner(sinnerId);
+    if (s === undefined) return undefined;
+    const b = s.assignedTo === null ? undefined : session.store.building(s.assignedTo);
+    if (b === undefined) {
+      const idle = state.sinners.filter((o) => o.assignedTo === null || session.store.building(o.assignedTo) === undefined);
+      const spot = LOUNGE_SPOTS[idle.indexOf(s) % LOUNGE_SPOTS.length] ?? { x: 8, y: 12 };
+      return { pos: spot, lookAt: null, working: false };
+    }
+    // vedúci stojí na poslednom mieste a len sa díva (deleguje)
+    const lead = leadOf(state, b.id);
+    const crew = [...workersOf(state, b.id), ...(lead === undefined ? [] : [lead])];
+    const slots = workerSlots(b.tx, b.ty, crew.length, (tx, ty) => !this.collision.isBlocked(tx, ty));
+    const slot = slots[crew.indexOf(s)] ?? { x: b.tx + 0.6, y: b.ty + 0.6 };
+    return { pos: slot, lookAt: { x: b.tx, y: b.ty }, working: s.role === 'worker' };
+  }
+
+  /** Voľné miesto vedľa budovy (napr. na kávovú prestávku pri kávovare). */
+  visitSpot(buildingId: string): Vec2 | undefined {
+    const b = session.store.building(buildingId);
+    if (b === undefined) return undefined;
+    const slots = workerSlots(b.tx, b.ty, 8, (tx, ty) => !this.collision.isBlocked(tx, ty));
+    return slots[slots.length - 1];
+  }
+
+  /** Dev menu: vyvolá kancelársku udalosť hneď. */
+  triggerOfficeEvent(): void {
+    this.life.officeEvent();
+  }
+
+  sendHome(sinnerId: string): void {
+    const v = this.sinnerViews.get(sinnerId);
+    const home = this.homeOf(sinnerId);
+    if (v !== undefined && home !== undefined) v.goTo(home.pos, home.lookAt, home.working);
+  }
+
+  sinnerView(id: string): SinnerView | undefined {
+    return this.sinnerViews.get(id);
+  }
+
+  buildingView(id: string): BuildingView | undefined {
+    return this.buildingViews.get(id);
+  }
+
+  get playerSprite(): { readonly x: number; readonly y: number } {
+    return this.player.sprite;
+  }
+
   /** Pošle každého hriešnika na jeho miesto: k budove, alebo do čakárne. */
   private layoutSinners(): void {
-    const { state } = session.store;
-    let lounge = 0;
-    for (const s of state.sinners) {
-      const v = this.sinnerViews.get(s.id);
-      if (v === undefined) continue;
-      const b = s.assignedTo === null ? undefined : session.store.building(s.assignedTo);
-      if (b === undefined) {
-        const spot = LOUNGE_SPOTS[lounge++ % LOUNGE_SPOTS.length] ?? { x: 8, y: 12 };
-        v.goTo(spot, null, false);
-        continue;
-      }
-      // vedúci stojí na poslednom mieste a len sa díva (deleguje)
-      const lead = leadOf(state, b.id);
-      const crew = [...workersOf(state, b.id), ...(lead === undefined ? [] : [lead])];
-      const slots = workerSlots(b.tx, b.ty, crew.length, (tx, ty) => !this.collision.isBlocked(tx, ty));
-      const slot = slots[crew.indexOf(s)] ?? { x: b.tx + 0.6, y: b.ty + 0.6 };
-      v.goTo(slot, { x: b.tx, y: b.ty }, s.role === 'worker');
-    }
+    for (const s of session.store.state.sinners) this.sendHome(s.id);
     this.refreshSelection();
   }
 
@@ -268,6 +312,7 @@ export class BaseScene extends Phaser.Scene {
   private placementProblem(tx: number, ty: number): string | null {
     if (this.grid.get(tx, ty) !== 'floor') return 'Na nábytok a steny sa nestavia. Ani v pekle.';
     if (session.store.buildingAt(tx, ty) !== undefined) return 'Tu už niečo stojí.';
+    if (this.decorTiles.has(`${tx},${ty}`)) return 'Kvetinu nesťahujte. Je to jediný živý tvor v kancelárii.';
     if (inLounge(tx, ty)) return 'Čakáreň je chránená zóna. Odbory by nás roztrhali.';
     const p = this.player.position;
     if (Math.abs(p.x - tx) < 0.85 && Math.abs(p.y - ty) < 0.85) return 'Nestavajte si budovu na hlavu. Ustúpte.';

@@ -160,6 +160,13 @@ export const ASSETS = {
     origin: FURNITURE_ORIGIN,
     placeholder: { kind: 'block', height: 16, footprint: 0.85, top: 0x7a5236, left: 0x5a3b26, right: 0x46301f },
   },
+  /** Dekorácie kancelárie (Kenney): kvetina, kôš, vešiak, chladnička, TV, gauč, rádio, regál – poradie podľa `DECOR`. */
+  deco_office: {
+    url: 'assets/tiles/deco_office.png',
+    sheet: { frameWidth: 64, frameHeight: 96, frames: 8 },
+    origin: FURNITURE_ORIGIN,
+    placeholder: { kind: 'block', height: 20, footprint: 0.5, top: 0x5a7a4a, left: 0x3a5a2a, right: 0x2a4a1a },
+  },
   /** Puny Characters: 24 stĺpcov (animácie) × 8 riadkov (smery), snímka 32×32. */
   char_player: punySheet('assets/sprites/manager.png', 0xe8a33d),
   char_sinner_0: punySheet('assets/sprites/sinner_0.png', 0x3fa7b5),

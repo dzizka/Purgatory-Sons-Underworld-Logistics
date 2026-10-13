@@ -166,6 +166,18 @@ def diamond_tile(im: Image.Image) -> Image.Image:
                 px[x, y] = (0, 0, 0, 0)
     return tile
 
+# dekorácie kancelárie (poradie = snímky `deco_office`, pozri BASE_DECOR v src/world/maps.ts)
+DECOR_FURNITURE = [
+    [("pottedPlant", "SE", 0, 0)],
+    [("trashcan", "SE", 0, 0)],
+    [("coatRackStanding", "SE", 0, 0)],
+    [("kitchenFridge", "SE", 0, 0)],
+    [("cabinetTelevision", "SE", 0, 0), ("televisionModern", "SE", 0, -20)],
+    [("loungeSofa", "SE", 0, 4)],
+    [("sideTable", "SE", 0, 0), ("radio", "SE", 0, -14)],
+    [("bookcaseClosedWide", "SE", 0, 0)],
+]
+
 
 def kenney(kit: Path, name: str, direction: str) -> Image.Image:
     im = Image.open(kit / f"{name}_{direction}.png").convert("RGBA")
@@ -212,6 +224,7 @@ def main() -> None:
     for name, parts in BUILDING_FURNITURE.items():
         furniture(kit, parts).save(OUT / "buildings" / f"{name}.png")
     strip([furniture(kit, parts) for parts in DESK_FURNITURE]).save(OUT / "tiles" / "desk_office.png")
+    strip([furniture(kit, parts) for parts in DECOR_FURNITURE]).save(OUT / "tiles" / "deco_office.png")
 
     # podlaha kancelárie: drevené parkety SBS (128×64 → 64×32)
     interior = next(args.sbs_floors.rglob("Interior"))

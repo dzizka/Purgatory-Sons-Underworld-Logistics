@@ -22,6 +22,29 @@ export const PROCESSING_OFFICE: readonly string[] = [
   '    #########           ',
 ];
 
+/** Snímky sheetu `deco_office`. */
+export const DECOR = { plant: 0, trash: 1, coatRack: 2, fridge: 3, tv: 4, sofa: 5, radio: 6, shelf: 7 } as const;
+export type DecorKind = keyof typeof DECOR;
+
+/**
+ * Dekorácie kancelárie – pri stenách, mimo cesty k výťahu. Sú to prekážky a nedá sa na ne stavať.
+ * (Výťah je na (12, 1), čakáreň x 5–11, y 11–13.)
+ */
+export const BASE_DECOR: readonly { readonly kind: DecorKind; readonly tx: number; readonly ty: number }[] = [
+  { kind: 'plant', tx: 1, ty: 1 },
+  { kind: 'fridge', tx: 5, ty: 1 },
+  { kind: 'tv', tx: 8, ty: 1 },
+  { kind: 'radio', tx: 16, ty: 1 },
+  { kind: 'shelf', tx: 19, ty: 1 },
+  { kind: 'plant', tx: 22, ty: 1 },
+  { kind: 'coatRack', tx: 1, ty: 5 },
+  { kind: 'trash', tx: 1, ty: 9 },
+  { kind: 'trash', tx: 22, ty: 7 },
+  { kind: 'plant', tx: 22, ty: 9 },
+  { kind: 'sofa', tx: 11, ty: 13 },
+  { kind: 'plant', tx: 5, ty: 13 },
+];
+
 /** Kde sa manažér objaví po návrate z expedície (pred výťahom pri zadnej stene). */
 export const BASE_ELEVATOR_ARRIVAL = { x: 12, y: 2 } as const;
 
