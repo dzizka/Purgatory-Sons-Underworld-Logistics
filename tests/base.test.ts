@@ -18,6 +18,10 @@ function freshStore(sinners: SinnerState[] = []): GameStore {
     resources: { souls: 50, forms: 50, sulfur: 500, coffee: 50 },
     buildings: [],
     sinners,
+    inventory: [],
+    equipment: { melee: null, ranged: null, trinket: null },
+    // všetko odomknuté – tieto testy overujú produkciu, nie progresiu
+    progress: { expeditionsWon: 99, expeditionsLost: 0, kills: 999 },
     rngSeed: 1,
     nextId: 100,
   };

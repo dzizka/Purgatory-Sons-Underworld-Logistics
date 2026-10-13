@@ -23,7 +23,8 @@ export type PlaceholderSpec =
     }
   | { readonly kind: 'capsule'; readonly width: number; readonly height: number; readonly fill: number; readonly outline: number }
   | { readonly kind: 'shadow'; readonly width: number; readonly height: number }
-  | { readonly kind: 'rect'; readonly width: number; readonly height: number; readonly fill: number };
+  | { readonly kind: 'rect'; readonly width: number; readonly height: number; readonly fill: number }
+  | { readonly kind: 'gem'; readonly size: number };
 
 /** Mriežka snímok v sprite sheete. */
 export interface SheetSpec {
@@ -128,6 +129,8 @@ export const ASSETS = {
   bld_training: buildingBlock('assets/buildings/training.png', 0xd8d0b0, 0xb0a888, 0x908870),
   fx_shadow: { origin: { x: 0.5, y: 0.5 }, placeholder: { kind: 'shadow', width: 22, height: 10 } },
   /** Sponka zo sponkovačky – generovaná, je to pár pixelov. */
+  /** Korisť na zemi – biely drahokam, farbu rarity dostane cez tint. */
+  fx_loot: { origin: { x: 0.5, y: 0.5 }, placeholder: { kind: 'gem', size: 16 } },
   fx_staple: { origin: { x: 0.5, y: 0.5 }, placeholder: { kind: 'rect', width: 7, height: 3, fill: 0xd8d8e0 } },
 } as const satisfies Record<string, AssetEntry>;
 

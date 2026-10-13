@@ -3,6 +3,7 @@ import { GAME_HEIGHT, GAME_WIDTH } from '@/config/constants';
 import { BUILDING_TYPES, BUILDINGS, type BuildingType } from '@/data/buildings';
 import { canAfford, formatAmounts, RESOURCE_IDS, RESOURCE_INFO } from '@/data/resources';
 import { TRAITS } from '@/data/traits';
+import { InventoryPanel } from '@/ui/InventoryPanel';
 import { BASE_EVENTS, type TileInfo } from '@/scenes/BaseScene';
 import type { SinnerState } from '@/state/GameState';
 import { session } from '@/state/session';
@@ -56,6 +57,7 @@ export class UIScene extends Phaser.Scene {
   private buildButtons: { type: BuildingType; text: Phaser.GameObjects.Text }[] = [];
   private toasts: Phaser.GameObjects.Text[] = [];
   private hoveredBuilding: string | null = null;
+  private inventory!: InventoryPanel;
 
   constructor() {
     super({ key: 'UIScene' });
@@ -79,6 +81,7 @@ export class UIScene extends Phaser.Scene {
     this.staff = this.add.container(0, 0);
 
     this.createBuildBar();
+    this.inventory = new InventoryPanel(this);
     this.bindKeys();
     this.subscribe();
     this.renderAll();
@@ -128,13 +131,16 @@ export class UIScene extends Phaser.Scene {
     const hire = this.add.text(PANEL.x, by, `[H] Prijať hriešnika (${formatAmounts(HIRE_COST)})`, this.style(11, affordable ? C.good : C.dim));
     this.clickable(hire, () => this.hire());
     this.staff.add(hire);
+    const inv = this.add.text(PANEL.x, by + 14, `[I] Sklad a výbava (${store.state.inventory.length})`, this.style(11, C.muted));
+    this.clickable(inv, () => this.inventory.toggle());
+    this.staff.add(inv);
     if (m.kind === 'assign' && store.sinner(m.sinnerId)?.assignedTo !== null) {
-      const free = this.add.text(PANEL.x, by + 14, '[U] Poslať do čakárne', this.style(11, C.muted));
+      const free = this.add.text(PANEL.x, by + 28, '[U] Poslať do čakárne', this.style(11, C.muted));
       this.clickable(free, () => this.unassignSelected());
       this.staff.add(free);
     }
-    this.staffBg.setSize(PANEL.w + 4, by - PANEL.y + 34);
-    this.staffBg.input?.hitArea.setTo(0, 0, PANEL.w + 4, by - PANEL.y + 34);
+    this.staffBg.setSize(PANEL.w + 4, by - PANEL.y + 48);
+    this.staffBg.input?.hitArea.setTo(0, 0, PANEL.w + 4, by - PANEL.y + 48);
   }
 
   private createBuildBar(): void {
@@ -157,6 +163,10 @@ export class UIScene extends Phaser.Scene {
     this.buildButtons.forEach(({ type, text }, i) => {
       const d = BUILDINGS[type];
       const active = m.kind === 'build' && m.type === type;
+      if (!session.store.isUnlocked(type)) {
+        text.setText(`[${i + 1}] ${d.name} (zamknuté)\n    ${d.unlock?.hint ?? ''}`).setColor(C.dim);
+        return;
+      }
       const color = active ? C.accent : canAfford(res, d.cost) ? C.text : C.dim;
       text.setText(`[${i + 1}] ${d.name}\n    ${formatAmounts(d.cost)}`).setColor(color);
     });
@@ -169,7 +179,7 @@ export class UIScene extends Phaser.Scene {
         ? `STAVBA: ${BUILDINGS[m.type].name} – klikni na voľnú podlahu (Shift = viac), Esc/pravé tlačidlo zruší`
         : m.kind === 'assign'
           ? `PRIDELENIE: ${session.store.sinner(m.sinnerId)?.name ?? '?'} – klikni na budovu, Esc zruší`
-          : 'WASD pohyb · koliesko zoom · klik na budovu/hriešnika · 1–5 stavba · H nábor · M hudba';
+          : 'WASD pohyb · klik na budovu/hriešnika · 1–5 stavba · H nábor · I sklad · E výťah · M hudba';
     this.modeText.setText(text).setColor(m.kind === 'idle' ? C.dim : C.accent);
   }
 
@@ -238,6 +248,11 @@ export class UIScene extends Phaser.Scene {
   // ---------- actions ----------
 
   private toggleBuild(type: BuildingType): void {
+    if (!session.store.isUnlocked(type)) {
+      const d = BUILDINGS[type];
+      this.toast(`${d.name} je zamknutá – ${d.unlock?.hint ?? '?'}.`, 'warn');
+      return;
+    }
     const m = session.mode;
     session.setMode(m.kind === 'build' && m.type === type ? { kind: 'idle' } : { kind: 'build', type });
   }
@@ -266,6 +281,7 @@ export class UIScene extends Phaser.Scene {
       if (type !== undefined) this.toggleBuild(type);
       else if (e.key === 'h' || e.key === 'H') this.hire();
       else if (e.key === 'u' || e.key === 'U') this.unassignSelected();
+      else if (e.key === 'i' || e.key === 'I') this.inventory.toggle();
       else if (e.key === 'Escape') {
         session.resetMode();
         session.selectBuilding(null);
@@ -289,6 +305,8 @@ export class UIScene extends Phaser.Scene {
       store.events.on('sinnerHired', () => this.renderStaff()),
       store.events.on('sinnerAssigned', () => this.renderStaff()),
       store.events.on('levelUp', () => this.renderStaff()),
+      store.events.on('inventoryChanged', () => this.renderStaff()),
+      store.events.on('buildingUnlocked', () => this.renderBuildBar()),
       store.events.on('notice', (n) => this.toast(n.text, n.tone)),
       ui.on('modeChanged', () => {
         this.renderMode();

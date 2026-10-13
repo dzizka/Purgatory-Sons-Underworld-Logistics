@@ -65,6 +65,15 @@ export function generatePlaceholder(scene: Phaser.Scene, key: string, spec: Plac
       g.fillStyle(spec.fill, 1).fillRect(0, 0, w, h);
       break;
     }
+    case 'gem': {
+      w = spec.size;
+      h = spec.size;
+      const c = spec.size / 2;
+      const pts = diamond(c, c, c - 1, c - 1);
+      g.fillStyle(0xffffff, 1).fillPoints(pts, true);
+      g.lineStyle(1, 0x000000, 0.6).strokePoints(pts, true);
+      break;
+    }
     case 'shadow': {
       w = spec.width;
       h = spec.height;

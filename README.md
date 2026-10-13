@@ -28,8 +28,10 @@ npm run preview    # lokálny náhľad produkčného buildu
 | Esc / pravé tlačidlo | zrušiť režim |
 | M | hudba on/off |
 | E na modrej platforme | služobný výťah na expedíciu / späť |
+| I | sklad a výbava (klik = nasadiť, pravé tlačidlo = skartovať) |
 
 **Expedícia (Oddelenie reklamácií):** WASD pohyb · ľavé tlačidlo Dierovačka (úder na blízko) · pravé tlačidlo Sponkovačka (strela) · Medzera úskok (krátka nezraniteľnosť) · E na výťahu = návrat s korisťou.
+Z nepriateľov padá **korisť** (farebný drahokam = rarita: bežné, byrokratické, legendárne, prekliate) s afixmi ako *„Prokrastinujúca dierovačka z porady, ktorá mohla byť e-mail“*. Vybavenie celej mapy dá garantovaný predmet.
 Nepriatelia pred úderom zastanú a pod nimi sa rozsvieti červený výsek – vtedy uskočte. Smrť = disciplinárne konanie a korisť prepadá. Základňa medzitým vyrába ďalej.
 
 **Ekonomika:** Podateľňa → Duše · Kávovar → Káva · Kopírka: Duša → 3 Formuláre · Mučiareň: Duša + 2 Formuláre + Káva → 6 Síry · Školiaca miestnosť: Káva → XP.
