@@ -7,7 +7,7 @@ import { generateSinner, levelFromXp, sinnerEfficiency } from '@/systems/staff/s
 import { Rng } from '@/core/rng';
 
 function sinner(id: string, traits: TraitId[] = [], xp = 0): SinnerState {
-  return { id, name: id, sin: '-', traits, look: 0, xp, role: 'worker', fatigue: 0, assignedTo: null };
+  return { id, name: id, kind: 'clerk', sin: '-', traits, look: 0, xp, role: 'worker', fatigue: 0, assignedTo: null };
 }
 
 /** Prázdny stav s danými hriešnikmi a dostatkom surovín. */
@@ -21,7 +21,7 @@ function freshStore(sinners: SinnerState[] = []): GameStore {
     inventory: [],
     equipment: { melee: null, ranged: null, trinket: null },
     // všetko odomknuté – tieto testy overujú produkciu, nie progresiu
-    progress: { expeditionsWon: 99, expeditionsLost: 0, kills: 999, deepestFloor: 0 },
+    progress: { expeditionsWon: 99, expeditionsLost: 0, kills: 999, deepestFloor: 0, bossesDefeated: 0 },
     retirees: [],
     rngSeed: 1,
     nextId: 100,
@@ -191,7 +191,7 @@ describe('GameStore príkazy', () => {
     const souls = store.state.resources.souls;
     expect(store.hire().ok).toBe(true);
     expect(store.hire().ok).toBe(true);
-    expect(store.state.resources.souls).toBe(souls - 2 * HIRE_COST.souls);
+    expect(store.state.resources.souls).toBe(souls - 2 * (HIRE_COST.souls ?? 0));
     expect(new Set(store.state.sinners.map((s) => s.id)).size).toBe(2);
   });
 

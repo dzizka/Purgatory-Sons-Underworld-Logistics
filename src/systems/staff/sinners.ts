@@ -2,20 +2,22 @@ import type { Rng } from '@/core/rng';
 import type { BuildingType } from '@/data/buildings';
 import { BURNOUT_MIN_MULT, COFFEE_BREAK_AT, MAX_LEVEL, PENSION_BONUS, PENSION_MAX } from '@/data/careers';
 import { FIRST_NAMES, SINS, SURNAME_INITIALS } from '@/data/names';
+import { SINNER_KIND_DEFS, type SinnerKind } from '@/data/sinnerKinds';
 import { TRAIT_IDS, TRAITS } from '@/data/traits';
 import type { SinnerState } from '@/state/GameState';
 
-/** Počet rôznych vzhľadov hriešnikov (sprite sheetov). */
-export const SINNER_LOOKS = 4;
+/** Počet rôznych vzhľadov hriešnikov (sprite sheetov) – súčet vzhľadov všetkých typov. */
+export const SINNER_LOOKS = 8;
 
-export function generateSinner(rng: Rng, id: string): SinnerState {
+export function generateSinner(rng: Rng, id: string, kind: SinnerKind = 'clerk'): SinnerState {
   const traitCount = rng.chance(0.35) ? 2 : 1;
   return {
     id,
     name: `${rng.pick(FIRST_NAMES)} ${rng.pick(SURNAME_INITIALS)}`,
+    kind,
     sin: rng.pick(SINS),
     traits: rng.sample(TRAIT_IDS, traitCount),
-    look: rng.int(0, SINNER_LOOKS - 1),
+    look: rng.pick(SINNER_KIND_DEFS[kind].looks),
     xp: 0,
     role: 'worker',
     fatigue: 0,
@@ -62,17 +64,26 @@ export function pensionMult(retirees: number): number {
  * `coworkers` sú ostatní pracovníci tej istej budovy (bez neho).
  */
 export function sinnerEfficiency(s: SinnerState, building: BuildingType, coworkers: readonly SinnerState[]): number {
-  let e = levelBonus(levelFromXp(s.xp)) * burnoutMult(s.fatigue);
+  const k = SINNER_KIND_DEFS[s.kind];
+  let e = levelBonus(levelFromXp(s.xp)) * burnoutMult(s.fatigue) * (k.mult ?? 1) * (k.buildingMult?.[building] ?? 1);
   for (const id of s.traits) {
     const t = TRAITS[id];
     e *= t.mult ?? 1;
     e *= t.buildingMult?.[building] ?? 1;
     e *= coworkers.length === 0 ? (t.aloneMult ?? 1) : (t.crowdMult ?? 1);
   }
-  for (const c of coworkers) for (const id of c.traits) e *= TRAITS[id].auraForOthers ?? 1;
+  for (const c of coworkers) {
+    e *= SINNER_KIND_DEFS[c.kind].auraForOthers ?? 1;
+    for (const id of c.traits) e *= TRAITS[id].auraForOthers ?? 1;
+  }
   return e;
 }
 
 export function xpMultiplier(s: SinnerState): number {
-  return s.traits.reduce((m, id) => m * (TRAITS[id].xpMult ?? 1), 1);
+  return s.traits.reduce((m, id) => m * (TRAITS[id].xpMult ?? 1), SINNER_KIND_DEFS[s.kind].xpMult ?? 1);
+}
+
+/** Rýchlosť únavy (barista sa unavuje pomalšie). */
+export function fatigueMultiplier(s: SinnerState): number {
+  return SINNER_KIND_DEFS[s.kind].fatigueMult ?? 1;
 }

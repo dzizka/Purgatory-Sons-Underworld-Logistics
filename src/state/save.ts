@@ -1,5 +1,6 @@
 import { BUILDING_TYPES } from '@/data/buildings';
 import { SINNER_ROLES } from '@/data/careers';
+import { SINNER_KINDS } from '@/data/sinnerKinds';
 import { AFFIX_IDS, BASE_ITEM_IDS, type Item, RARITIES } from '@/data/items';
 import { RESOURCE_IDS } from '@/data/resources';
 import { TRAIT_IDS } from '@/data/traits';
@@ -14,7 +15,7 @@ import { MAX_XP } from '@/systems/staff/sinners';
 export const SAVE_KEY = 'purgatory-logistics.save';
 /** Sem sa odloží poškodený save, aby sa dal ručne zachrániť. */
 export const CORRUPT_BACKUP_KEY = 'purgatory-logistics.save.corrupt';
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export interface Settings {
   /** 0..1 */
@@ -70,6 +71,15 @@ const MIGRATIONS: Readonly<Record<number, (state: Json) => Json>> = {
     sinners: Array.isArray(s.sinners) ? s.sinners.map((x) => (isObj(x) ? { role: 'worker', fatigue: 0, ...x } : x)) : s.sinners,
     retirees: s.retirees ?? [],
   }),
+  // v3 → v4: typy hriešnikov (všetci doterajší sú úradníci), počítadlo porazených CEO
+  3: (s) => {
+    const progress = isObj(s.progress) ? s.progress : {};
+    return {
+      ...s,
+      sinners: Array.isArray(s.sinners) ? s.sinners.map((x) => (isObj(x) ? { kind: 'clerk', ...x } : x)) : s.sinners,
+      progress: { ...progress, bossesDefeated: progress.bossesDefeated ?? 0 },
+    };
+  },
 };
 
 // ---------------------------------------------------------------- validácia
@@ -124,6 +134,7 @@ function validateState(raw: unknown): GameState {
     return {
       id: str(o.id, `sinners[${i}].id`),
       name: str(o.name, `sinners[${i}].name`),
+      kind: oneOf(o.kind, SINNER_KINDS, `sinners[${i}].kind`),
       sin: str(o.sin, `sinners[${i}].sin`),
       traits: arr(o.traits, `sinners[${i}].traits`, 4).map((t, j) => oneOf(t, TRAIT_IDS, `sinners[${i}].traits[${j}]`)),
       look: Math.floor(num(o.look, `sinners[${i}].look`, 0)),
@@ -174,6 +185,7 @@ function validateState(raw: unknown): GameState {
       expeditionsLost: num(progress.expeditionsLost, 'progress.expeditionsLost', 0),
       kills: num(progress.kills, 'progress.kills', 0),
       deepestFloor: Math.floor(num(progress.deepestFloor, 'progress.deepestFloor', 0)),
+      bossesDefeated: Math.floor(num(progress.bossesDefeated, 'progress.bossesDefeated', 0)),
     },
     retirees: arr(s.retirees, 'retirees', 1000).map((n, i) => str(n, `retirees[${i}]`)),
     rngSeed: num(s.rngSeed, 'rngSeed') >>> 0,

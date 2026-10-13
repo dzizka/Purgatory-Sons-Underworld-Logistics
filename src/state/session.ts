@@ -1,5 +1,6 @@
 import { EventBus } from '@/core/EventBus';
 import type { BuildingType } from '@/data/buildings';
+import type { SinnerKind } from '@/data/sinnerKinds';
 import { formatAmounts, type Resources } from '@/data/resources';
 import type { GameState } from '@/state/GameState';
 import {
@@ -45,6 +46,8 @@ class Session {
   readonly ui = new EventBus<UiEvents>();
   private currentMode: UiMode = IDLE;
   selectedBuilding: string | null = null;
+  /** Aký typ hriešnika HR práve naberá (nastavenie UI, neukladá sa). */
+  hireKind: SinnerKind = 'clerk';
   /** `downTime` posledného kliknutia, ktoré spracovalo UI – herný svet ho ignoruje. */
   uiPointerDownTime = -1;
   /** Stav surovín pri odchode na expedíciu – na súhrn „kým ste boli preč“. */

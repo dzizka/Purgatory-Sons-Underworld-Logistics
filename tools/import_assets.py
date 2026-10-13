@@ -97,7 +97,17 @@ BUILDING_BLOCKS = {
 ENEMY_SHEETS = {"auditor": "Orc-Grunt", "compliance": "Orc-Soldier-Red"}
 
 # vzhľady hriešnikov (index = SinnerState.look)
-SINNER_SHEETS = ["Human-Worker-Cyan", "Orc-Peon-Cyan", "Orc-Peon-Red", "Mage-Red"]
+# 0–3 úradníci, 4 stážista, 5 účtovník, 6 právnik, 7 barista (pozri src/data/sinnerKinds.ts)
+SINNER_SHEETS = [
+    "Human-Worker-Cyan",
+    "Orc-Peon-Cyan",
+    "Orc-Peon-Red",
+    "Mage-Red",
+    "Character-Base",
+    "Mage-Cyan",
+    "Archer-Purple",
+    "Archer-Green",
+]
 
 
 # Boss „CEO“ z 8 Directional 2D Businessman (snímky 256×256, postava ~50×65 px pri spodku stredu).

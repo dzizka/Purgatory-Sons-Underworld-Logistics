@@ -153,8 +153,21 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - [x] Porada rešpektuje strop posíl, rozzúrenie nastane raz, porážka sa započíta aj po zostupe (testy)
 - [x] Sprite sedí na mriežku manifestu (test assetov)
 
+## Fáza 10 – Typy hriešnikov ✅
+**Cieľ:** nábor je rozhodnutie, nie len tlačidlo.
+
+- Päť typov: **Úradník** (základ), **Stážista** (1 D, 70 % výkon, 2× XP), **Barista** (kávovar +80 %, polovičná únava), **Účtovník** (podateľňa a kopírka +50 %, inde −10 %), **Firemný právnik** (mučiareň +60 %, kolegovia v budove +10 %)
+- Odomykanie postupom: zabitia, výpravy, najhlbšie poschodie, porazení CEO (hláška pri odomknutí); vlastnosti (traity) sa pridávajú náhodne ku každému typu
+- HR panel: [T] prepína typ náboru, cena a popis typu pri tlačidle; typ v riadku hriešnika a v detaile
+- Vlastný vzhľad pre každý nový typ (Puny Characters, CC0)
+- Save verzia 4 s migráciou (doterajší hriešnici = úradníci, počítadlo porazených CEO)
+
+**Definition of Done**
+- [x] Každý typ merateľne mení výkon tam, kde má (testy)
+- [x] Zamknutý typ sa nedá nabrať, odomknutie sa ohlási (testy)
+- [x] Staré savy sa zmigrujú (test v3 → v4)
+
 ---
 
 ## Backlog (po MVP)
-- Nové typy hriešnikov a ich odomykanie
 - Kancelársky nábytok v pixel arte (dnes polovičné kovové bloky)

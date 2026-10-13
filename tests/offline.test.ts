@@ -7,6 +7,7 @@ import { levelFromXp } from '@/systems/staff/sinners';
 const worker = (id: string, assignedTo: string): SinnerState => ({
   id,
   name: id,
+  kind: 'clerk',
   sin: '-',
   traits: [],
   look: 0,
@@ -30,7 +31,7 @@ function chainState(withCoffee = true): GameState {
     sinners: [worker('a', 'b1'), worker('b', 'b2'), ...(withCoffee ? [worker('c', 'b3')] : [])],
     inventory: [],
     equipment: { melee: null, ranged: null, trinket: null },
-    progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0, deepestFloor: 0 },
+    progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0, deepestFloor: 0, bossesDefeated: 0 },
     retirees: [],
     rngSeed: 1,
     nextId: 10,
