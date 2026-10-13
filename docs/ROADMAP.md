@@ -25,7 +25,7 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 **Cieľ:** Hráč (stredný manažér) chodí po mape.
 
 - `assets/manifest.ts` + `placeholders.ts` (fallback textúry, ak asset chýba)
-- Prvé CC0 assety (Kenney Isometric packs), zápis do `CREDITS.md` *(odložené – zatiaľ generované placeholdery; manifest je pripravený, stačí doplniť `url`)*
+- Prvé CC0 assety, zápis do `CREDITS.md` – Isometric Stone Soup (dlaždice, steny), Puny Characters (8-smerový manažér), hudba „Searching“
 - `IsoMap` – načítanie mapy (Tiled JSON alebo TS definícia), walkable grid, kolízie
 - `IsoSprite` – entita s world pozíciou, automatický depth každý frame
 - Pohyb WASD/šípky v izometrických smeroch (8-smerný), normalizácia diagonál

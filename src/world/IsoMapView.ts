@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
-import type { AssetKey } from '@/assets/manifest';
+import { type AssetKey, variantCount } from '@/assets/manifest';
 import { FLOOR_DEPTH, TILE_HEIGHT, TILE_WIDTH } from '@/config/constants';
 import { worldToScreen } from '@/core/iso';
 import { IsoSprite } from '@/world/IsoSprite';
-import type { ParsedMap, PropPlacement } from '@/world/TileGrid';
+import { type ParsedMap, type PropPlacement, tileVariant } from '@/world/TileGrid';
 
 const PROP_TEXTURE: Readonly<Record<PropPlacement['kind'], AssetKey>> = {
   wall: 'block_wall',
@@ -22,17 +22,20 @@ export class IsoMapView {
 
   constructor(scene: Phaser.Scene, map: ParsedMap) {
     const { grid } = map;
+    const floorVariants = variantCount('tile_floor');
     for (let ty = 0; ty < grid.height; ty++) {
       for (let tx = 0; tx < grid.width; tx++) {
         if (grid.get(tx, ty) === 'void') continue;
         const s = worldToScreen({ x: tx, y: ty });
-        scene.add
-          .image(s.x, s.y, (tx + ty) % 2 === 0 ? 'tile_floor_a' : 'tile_floor_b')
-          .setDepth(FLOOR_DEPTH);
+        scene.add.image(s.x, s.y, 'tile_floor', tileVariant(tx, ty, floorVariants)).setDepth(FLOOR_DEPTH);
       }
     }
 
-    this.occluders = map.props.map((prop) => new IsoSprite(scene, PROP_TEXTURE[prop.kind], { x: prop.tx, y: prop.ty }));
+    this.occluders = map.props.map((prop) => {
+      const key = PROP_TEXTURE[prop.kind];
+      const frame = tileVariant(prop.tx, prop.ty, variantCount(key));
+      return new IsoSprite(scene, key, { x: prop.tx, y: prop.ty }, { frame });
+    });
 
     const left = worldToScreen({ x: 0, y: grid.height - 1 }).x - TILE_WIDTH / 2;
     const right = worldToScreen({ x: grid.width - 1, y: 0 }).x + TILE_WIDTH / 2;

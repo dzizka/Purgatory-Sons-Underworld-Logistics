@@ -59,6 +59,14 @@ export class TileGrid {
   }
 }
 
+/** Deterministický „náhodný“ variant dlaždice – rovnaká mapa vyzerá vždy rovnako. */
+export function tileVariant(tx: number, ty: number, variants: number): number {
+  if (variants <= 1) return 0;
+  let h = Math.imul(tx, 73856093) ^ Math.imul(ty, 19349663);
+  h = Math.imul(h ^ (h >>> 13), 0x5bd1e995);
+  return ((h ^ (h >>> 15)) >>> 0) % variants;
+}
+
 /**
  * ASCII mapa → grid. Riadok = world y, stĺpec = world x.
  * `.` podlaha, `#` stena, `P` stĺp, `D` stôl, `@` spawn, medzera = prázdno.

@@ -3,24 +3,25 @@ import { assetEntry, type AssetKey } from '@/assets/manifest';
 import { isoDepth, worldToScreen, type WorldPoint } from '@/core/iso';
 
 /**
- * Obrázok, ktorý žije vo world súradniciach. Pozícia na obrazovke a hĺbka (Y-sort)
+ * Sprite, ktorý žije vo world súradniciach. Pozícia na obrazovke a hĺbka (Y-sort)
  * sa odvodzujú z world pozície – nikdy ich nenastavuj priamo.
  */
-export class IsoSprite extends Phaser.GameObjects.Image {
+export class IsoSprite extends Phaser.GameObjects.Sprite {
   worldX: number;
   worldY: number;
   worldZ: number;
   /** Jemný posun hĺbky pre objekty na rovnakom mieste (napr. tieň pod postavou). */
   depthBias: number;
 
-  constructor(scene: Phaser.Scene, key: AssetKey, world: WorldPoint, depthBias = 0) {
-    super(scene, 0, 0, key);
-    const { origin } = assetEntry(key);
+  constructor(scene: Phaser.Scene, key: AssetKey, world: WorldPoint, opts: { depthBias?: number; frame?: number } = {}) {
+    super(scene, 0, 0, key, opts.frame);
+    const { origin, scale } = assetEntry(key);
     this.setOrigin(origin.x, origin.y);
+    if (scale !== undefined) this.setScale(scale);
     this.worldX = world.x;
     this.worldY = world.y;
     this.worldZ = world.z ?? 0;
-    this.depthBias = depthBias;
+    this.depthBias = opts.depthBias ?? 0;
     this.syncToWorld();
     scene.add.existing(this);
   }
