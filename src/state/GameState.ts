@@ -1,4 +1,5 @@
 import type { BuildingType } from '@/data/buildings';
+import type { SinnerRole } from '@/data/careers';
 import type { Item, ItemSlot } from '@/data/items';
 import type { Resources } from '@/data/resources';
 import type { TraitId } from '@/data/traits';
@@ -16,6 +17,8 @@ export interface GameState {
   /** id predmetu v každom slote výbavy */
   equipment: Record<ItemSlot, string | null>;
   progress: ProgressState;
+  /** Mená hriešnikov v dôchodku (dôchodkový fond = trvalý bonus výroby). */
+  retirees: string[];
   rngSeed: number;
   nextId: number;
 }
@@ -41,6 +44,10 @@ export interface SinnerState {
   /** Index vzhľadu (sprite sheet). */
   readonly look: number;
   xp: number;
+  /** Radový pracovník, alebo vedúci budovy (nepracuje, budova je rýchlejšia). */
+  role: SinnerRole;
+  /** Únava 0..1; nad prahom bez kávy klesá výkon (vyhorenie). */
+  fatigue: number;
   assignedTo: string | null;
 }
 

@@ -125,15 +125,23 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - [x] Hlbšie poschodia sú merateľne ťažšie a štedrejšie (testy)
 - [x] Zostup prenesie korisť a zdravie; návrat domov pripíše všetko, smrť všetko vezme
 
-## Fáza 8 – Kariéra hriešnikov & vyváženie (plán)
-- Strop úrovne 10; na maxime voľba: **povýšiť na vedúceho** (nepracuje, celá budova +25 %), **dôchodok** (trvalý bonus), alebo nechať pracovať
-- Vyhorenie: dlhá práca bez kávy spomaľuje
-- Vyváženie ekonomiky a offline progresu so stropom úrovne
+## Fáza 8 – Kariéra hriešnikov & vyváženie ✅
+**Cieľ:** hriešnik na maxime nie je slepá ulička, ale rozhodnutie.
+
+- Strop úrovne 10 (XP sa ďalej nezbierajú); na strope hláška a v Personálnom voľba: **[P] povýšiť na vedúceho** (nepracuje, nezaberá miesto, budova +25 %, najviac jeden na budovu), **[R] dôchodok** (odíde, dôchodkový fond = celá výroba +5 % za dôchodcu, najviac +50 %), alebo nechať pracovať
+- Vyhorenie: pracovníci sa unavujú, nad 60 % si sami vezmú kávu zo skladu; bez kávy výkon klesá až na polovicu, v čakárni sa zotavia
+- Offline progres počíta aj únavu a kávu; strop úrovne obmedzuje nekonečný rast z offline
+- Save verzia 3 s migráciou (rola, únava, dôchodkový fond; staré XP sa orežú na strop)
+
+**Definition of Done**
+- [x] Úroveň nikdy neprekročí 10, ani po 8 h offline (test)
+- [x] Vedúci a dôchodok merateľne zrýchlia výrobu (testy)
+- [x] Bez kávy reťazec ide zhruba na polovicu (test)
+- [x] Staré savy sa zmigrujú bez straty (test v2 → v3)
 
 ---
 
 ## Backlog (po MVP)
 - Nové typy hriešnikov a ich odomykanie
 - Boss „CEO“ na každom 5. poschodí (Businessman sprite v `assets-src/`)
-- Vyváženie ekonomiky (offline úrovne hriešnikov rastú rýchlo)
 - Kancelársky nábytok v pixel arte (dnes polovičné kovové bloky)

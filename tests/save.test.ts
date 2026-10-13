@@ -10,7 +10,9 @@ import {
   type StorageLike,
   writeToStorage,
 } from '@/state/save';
+import { MAX_LEVEL } from '@/data/careers';
 import { createInitialState, GameStore } from '@/state/store';
+import { levelFromXp } from '@/systems/staff/sinners';
 
 function memoryStorage(initial: Record<string, string> = {}): StorageLike & { data: Record<string, string> } {
   const data = { ...initial };
@@ -120,6 +122,38 @@ describe('migrácia v1 → v2', () => {
     store.recordExpedition(false, 9, 6);
     store.recordExpedition(true, 1, 2);
     expect(store.state.progress.deepestFloor).toBe(3);
+  });
+});
+
+describe('migrácia v2 → v3', () => {
+  it('save v2 bez kariéry dostane rolu pracovníka, nulovú únavu a prázdny fond', () => {
+    const state = createInitialState(6);
+    const { retirees: _r, ...rest } = state;
+    const v2 = { ...rest, sinners: state.sinners.map(({ role: _role, fatigue: _f, ...s }) => ({ ...s, xp: 99_999 })) };
+    const r = parseSave(JSON.stringify({ saveVersion: 2, savedAt: 5, state: v2 }));
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.migratedFrom).toBe(2);
+    expect(r.save.state.retirees).toEqual([]);
+    for (const s of r.save.state.sinners) {
+      expect(s.role).toBe('worker');
+      expect(s.fatigue).toBe(0);
+      expect(levelFromXp(s.xp)).toBe(MAX_LEVEL); // staré „nekonečné“ XP sa orežú na strop
+    }
+  });
+
+  it('dvaja vedúci v jednej budove → druhý ide do čakárne', () => {
+    const state = createInitialState(7);
+    state.buildings.push({ id: 'b1', type: 'intake', tx: 1, ty: 1, progress: 0, status: 'idle', cyclesDone: 0 });
+    state.sinners = state.sinners.map((s) => ({ ...s, role: 'lead', assignedTo: 'b1' }));
+    const r = parseSave(serialize(state, DEFAULT_SETTINGS, 1));
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.save.state.sinners.filter((s) => s.assignedTo === 'b1')).toHaveLength(1);
+  });
+
+  it('neznáma rola sa odmietne', () => {
+    const state = createInitialState(8);
+    const bad = { ...state, sinners: state.sinners.map((s) => ({ ...s, role: 'ceo' })) };
+    expect(parseSave(JSON.stringify({ saveVersion: 3, savedAt: 0, state: bad })).ok).toBe(false);
   });
 });
 

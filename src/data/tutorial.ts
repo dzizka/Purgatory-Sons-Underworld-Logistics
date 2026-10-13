@@ -27,6 +27,8 @@ export const TUTORIAL: readonly TutorialSlide[] = [
       'Klik na hriešnika (vo svete alebo v Personálnom), potom klik na budovu = pridelenie.',
       'Vlastnosti menia výkon: Workoholik +30 %, Prokrastinátor −40 %, Mikromanažér zrýchli kolegov…',
       'Prácou sa učia. H = nábor za 3 duše.',
+      'Bez kávy vyhoria a robia na polovicu – Kávovar nie je benefit, je to infraštruktúra.',
+      'Na úrovni 10: P = povýšiť na vedúceho (budova +25 %), R = dôchodok (celá výroba +5 %).',
     ],
   },
   {
