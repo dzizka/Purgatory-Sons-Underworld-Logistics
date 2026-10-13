@@ -82,6 +82,8 @@ WorldY = (ScreenY / (TH/2) - ScreenX / (TW/2)) / 2
 │   │   └── placeholders.ts       # generovanie fallback textúr
 │   ├── scenes/
 │   │   ├── BootScene.ts          # preload + placeholdery
+│   │   ├── MenuScene.ts          # hlavné menu / pauza
+│   │   ├── TutorialScene.ts      # školenie nového zamestnanca
 │   │   ├── BaseScene.ts          # základňa (manažment)
 │   │   ├── ExpeditionScene.ts    # ARPG expedícia (zobrazenie + vstup, logika v systems/combat)
 │   │   ├── ExpeditionUIScene.ts  # HUD expedície
@@ -104,8 +106,9 @@ WorldY = (ScreenY / (TH/2) - ScreenX / (TW/2)) / 2
 │   │   ├── GameState.ts          # typy celého stavu
 │   │   ├── store.ts              # in-memory store + príkazy
 │   │   ├── session.ts            # aktívna relácia: store + zdieľaný stav UI (režim, výber)
-│   │   └── save.ts               # localStorage, verzie, migrácie (Fáza 6)
+│   │   └── save.ts               # localStorage, validácia, verzie a migrácie, export/import
 │   ├── ui/                       # HUD komponenty (InventoryPanel – sklad a výbava)
+│   ├── audio/                    # hudba podľa nastavení + syntetizované SFX (Web Audio)
 │   ├── data/                     # statické definície (JSON/TS): budovy, zbrane, traity, texty
 │   └── types/                    # zdieľané typy
 ├── tests/                        # Vitest unit testy pre core/ a systems/

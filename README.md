@@ -26,7 +26,8 @@ npm run preview    # lokálny náhľad produkčného buildu
 | H | nábor nového hriešnika (3 duše) |
 | klik na budovu | detail: stav, recept, efektivita pracovníkov |
 | Esc / pravé tlačidlo | zrušiť režim |
-| M | hudba on/off |
+| M | zvuk on/off |
+| Esc | zrušiť režim → menu (uloží hru) |
 | E na modrej platforme | služobný výťah na expedíciu / späť |
 | I | sklad a výbava (klik = nasadiť, pravé tlačidlo = skartovať) |
 
@@ -38,6 +39,11 @@ Nepriatelia pred úderom zastanú a pod nimi sa rozsvieti červený výsek – v
 Vlastnosti hriešnikov (Workoholik, Prokrastinátor, Mikromanažér, Introvert…) menia výkon; skúsenosti zvyšujú úroveň (+10 % / level).
 
 S `?debug` v URL je inštancia hry dostupná v konzole ako `window.__game`.
+
+## Ukladanie
+
+Hra sa ukladá automaticky do `localStorage` (každých 15 s, pri skrytí karty a pri zatvorení). Pri ďalšom spustení sa dopočíta výroba za čas neprítomnosti (najviac 8 h).
+V menu sa dá uložená hra **exportovať** do súboru a **importovať** späť (záloha, prenos medzi počítačmi). Poškodený save hru nezhodí – odloží sa do zálohy (`purgatory-logistics.save.corrupt`) a začne sa nová smena.
 
 ## Deploy
 

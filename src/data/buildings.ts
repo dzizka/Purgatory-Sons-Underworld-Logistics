@@ -54,7 +54,7 @@ export const BUILDINGS: Readonly<Record<BuildingType, BuildingDef>> = {
     inputs: { souls: 1, forms: 2, coffee: 1 },
     outputs: { sulfur: 6 },
     maxWorkers: 3,
-    unlock: { expeditionsWon: 1, hint: 'vráťte sa živý z 1 expedície' },
+    unlock: { expeditionsWon: 1, hint: 'po 1. úspešnej expedícii' },
   },
   training: {
     name: 'Školiaca miestnosť',
@@ -65,6 +65,6 @@ export const BUILDINGS: Readonly<Record<BuildingType, BuildingDef>> = {
     outputs: {},
     trainingXp: 15,
     maxWorkers: 3,
-    unlock: { kills: 10, hint: 'vybavte 10 reklamácií' },
+    unlock: { kills: 10, hint: 'po 10 reklamáciách' },
   },
 };

@@ -36,6 +36,6 @@ export class BootScene extends Phaser.Scene {
         for (let i = 0; i < entry.sheet.frames; i++) tex.add(i, 0, 0, 0, src.width, src.height);
       }
     }
-    this.scene.start('BaseScene');
+    this.scene.start('MenuScene');
   }
 }

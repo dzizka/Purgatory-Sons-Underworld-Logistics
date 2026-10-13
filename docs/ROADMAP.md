@@ -91,17 +91,27 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 
 ---
 
-## Fáza 6 – Ukladanie, offline progres & polish
+## Fáza 6 – Ukladanie, offline progres & polish ✅
 **Cieľ:** Hra, ku ktorej sa oplatí vrátiť.
 
 - `state/save.ts`: JSON serializácia do `localStorage`, `saveVersion` + migrácie, autosave (interval + pri `visibilitychange`)
 - Offline progres: pri načítaní dopočítať produkciu za čas neprítomnosti (s limitom)
 - Export/import save ako súbor (záloha)
-- Hlavné menu, nastavenia (hlasitosť, zoom), CC0 hudba a SFX
+- Hlavné menu (pokračovať, nová smena s potvrdením, export/import, hlasitosť hudby a efektov, zvuk on/off), Esc = menu
+- CC0 hudba; zvukové efekty syntetizované vo Web Audio (bez súborov, bez licencií)
+- Dopočítanie výroby aj po návrate do skrytej karty prehliadača
 - Onboarding: „Školenie nového zamestnanca“ (tutoriál ako HR prezentácia)
 
 **Definition of Done**
-- [ ] Refresh stránky zachová celý progres
-- [ ] Poškodený/starý save sa nenačíta s pádom – migrácia alebo bezpečný reset s varovaním
-- [ ] Návrat po hodine ukáže „Kým ste boli preč…“ súhrn
-- [ ] Všetky assety sú v `CREDITS.md` s CC0/PD licenciou
+- [x] Refresh stránky zachová celý progres
+- [x] Poškodený/starý save sa nenačíta s pádom – migrácia alebo bezpečný reset s varovaním (poškodený save sa odloží do zálohy)
+- [x] Návrat po hodine ukáže „Kým ste boli preč…“ súhrn
+- [x] Všetky assety sú v `CREDITS.md` s CC0/PD licenciou
+
+---
+
+## Backlog (po MVP)
+- Nové typy hriešnikov a ich odomykanie
+- Viac expedičných máp / procedurálne generované oddelenia, boss „CEO“ (Businessman sprite v `assets-src/`)
+- Vyváženie ekonomiky (offline úrovne hriešnikov rastú rýchlo)
+- Kancelársky nábytok v pixel arte (dnes polovičné kovové bloky)
