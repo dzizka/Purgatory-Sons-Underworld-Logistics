@@ -55,6 +55,7 @@ export type ExpeditionOutcome = {
   readonly kills: number;
   /** Koľkých CEO manažér počas výpravy porazil. */
   readonly bossKills: number;
+  readonly killsByKind: Partial<Record<EnemyState['kind'], number>>;
   /** Zdvihnutá korisť (pri prehre prepadla – je tu iba na oznámenie). */
   readonly loot: readonly Item[];
 };
@@ -554,6 +555,7 @@ export class ExpeditionScene extends Phaser.Scene {
       rewards: { ...this.sim.rewards },
       kills: this.sim.kills,
       bossKills: this.sim.bossKills,
+      killsByKind: { ...this.sim.killsByKind },
       loot: [...this.sim.loot],
     };
     const { store } = session;
@@ -561,7 +563,7 @@ export class ExpeditionScene extends Phaser.Scene {
       store.grant(outcome.rewards);
       store.addLoot(outcome.loot);
     }
-    store.recordExpedition(won, outcome.kills, outcome.depth, outcome.bossKills);
+    store.recordExpedition(won, outcome.kills, outcome.depth, outcome.bossKills, outcome.killsByKind);
     session.save();
     this.events.emit('finished', outcome);
     this.time.delayedCall(won ? 400 : 2600, () => {

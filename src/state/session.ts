@@ -15,6 +15,7 @@ import {
 } from '@/state/save';
 import { createInitialState, GameStore, type GameEvents, type Result } from '@/state/store';
 import { applyOffline, formatDuration } from '@/systems/base/offline';
+import { dayKey } from '@/systems/quotas/quotas';
 
 /** Čo práve robí kurzor v hernom svete. */
 export type UiMode =
@@ -111,6 +112,11 @@ class Session {
     this.save();
   }
 
+  /** Nový miestny deň → nové kvóty. Volá sa pri štarte a periodicky (hra môže bežať cez polnoc). */
+  refreshQuotas(now: Date = new Date()): void {
+    this.store.refreshQuotas(dayKey(now));
+  }
+
   /** Dopočíta výrobu za čas, keď hra nebežala (zavretá karta, skrytý prehliadač). */
   catchUp(elapsedMs: number): void {
     if (!(elapsedMs > 1000)) return;
@@ -151,6 +157,7 @@ class Session {
     this.currentMode = IDLE;
     this.selectedBuilding = null;
     this.departureResources = null;
+    this.refreshQuotas();
   }
 
   // ---------- UI režim ----------

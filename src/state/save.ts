@@ -1,6 +1,9 @@
 import { BUILDING_TYPES } from '@/data/buildings';
 import { SINNER_ROLES } from '@/data/careers';
 import { SINNER_KINDS } from '@/data/sinnerKinds';
+import { QUOTA_KINDS, QUOTAS_PER_DAY, type Quota } from '@/data/quotas';
+import { ENEMIES, type EnemyKind } from '@/data/enemies';
+import type { QuotaBoard } from '@/systems/quotas/quotas';
 import { AFFIX_IDS, BASE_ITEM_IDS, type Item, RARITIES } from '@/data/items';
 import { RESOURCE_IDS } from '@/data/resources';
 import { TRAIT_IDS } from '@/data/traits';
@@ -15,7 +18,7 @@ import { MAX_XP } from '@/systems/staff/sinners';
 export const SAVE_KEY = 'purgatory-logistics.save';
 /** Sem sa odloží poškodený save, aby sa dal ručne zachrániť. */
 export const CORRUPT_BACKUP_KEY = 'purgatory-logistics.save.corrupt';
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export interface Settings {
   /** 0..1 */
@@ -80,6 +83,8 @@ const MIGRATIONS: Readonly<Record<number, (state: Json) => Json>> = {
       progress: { ...progress, bossesDefeated: progress.bossesDefeated ?? 0 },
     };
   },
+  // v4 → v5: denné kvóty (vygenerujú sa pri najbližšom spustení)
+  4: (s) => ({ ...s, quotas: s.quotas ?? null }),
 };
 
 // ---------------------------------------------------------------- validácia
@@ -188,9 +193,48 @@ function validateState(raw: unknown): GameState {
       bossesDefeated: Math.floor(num(progress.bossesDefeated, 'progress.bossesDefeated', 0)),
     },
     retirees: arr(s.retirees, 'retirees', 1000).map((n, i) => str(n, `retirees[${i}]`)),
+    quotas: validateQuotas(s.quotas),
     rngSeed: num(s.rngSeed, 'rngSeed') >>> 0,
     nextId: Math.floor(num(s.nextId, 'nextId', 0)),
   };
+}
+
+const ENEMY_KINDS = Object.keys(ENEMIES) as EnemyKind[];
+
+function validateQuota(raw: unknown, path: string): Quota {
+  const o = obj(raw, path);
+  const kind = oneOf(o.kind, QUOTA_KINDS, `${path}.kind`);
+  const target = Math.max(1, Math.floor(num(o.target, `${path}.target`, 1)));
+  switch (kind) {
+    case 'produce':
+      return { kind, target, resource: oneOf(o.resource, RESOURCE_IDS, `${path}.resource`) };
+    case 'killKind':
+      return { kind, target, enemy: oneOf(o.enemy, ENEMY_KINDS, `${path}.enemy`) };
+    default:
+      return { kind, target };
+  }
+}
+
+/** Kvóty sú bonus: poškodená tabuľa sa zahodí a zajtra (či hneď) vygeneruje nová – save tým nepadá. */
+function validateQuotas(raw: unknown): QuotaBoard | null {
+  if (raw === null || raw === undefined) return null;
+  try {
+    const o = obj(raw, 'quotas');
+    const day = str(o.day, 'quotas.day');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+    return {
+      day,
+      entries: arr(o.entries, 'quotas.entries', QUOTAS_PER_DAY).map((x, i) => {
+        const e = obj(x, `quotas.entries[${i}]`);
+        const quota = validateQuota(e.quota, `quotas.entries[${i}].quota`);
+        return { quota, progress: Math.min(quota.target, num(e.progress, `quotas.entries[${i}].progress`, 0)), claimed: e.claimed === true };
+      }),
+      streak: Math.floor(num(o.streak ?? 0, 'quotas.streak', 0)),
+      bonusClaimed: o.bonusClaimed === true,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function validateSettings(raw: unknown): Settings {

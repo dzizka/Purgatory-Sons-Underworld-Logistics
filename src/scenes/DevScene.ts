@@ -1,7 +1,18 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT } from '@/config/constants';
 import type { Rarity } from '@/data/items';
-import { addItem, devFlags, grantAll, healPlayer, killAll, maxLevelAll, setFatigueAll, unlockAll } from '@/dev/cheats';
+import {
+  addItem,
+  completeQuotas,
+  devFlags,
+  grantAll,
+  healPlayer,
+  killAll,
+  maxLevelAll,
+  nextQuotaDay,
+  setFatigueAll,
+  unlockAll,
+} from '@/dev/cheats';
 import type { BaseScene } from '@/scenes/BaseScene';
 import type { ExpeditionScene } from '@/scenes/ExpeditionScene';
 import { session } from '@/state/session';
@@ -74,6 +85,8 @@ export class DevScene extends Phaser.Scene {
       item('legendary', 'legendárny'),
       item('cursed', 'prekliaty'),
       { label: 'Simulovať 1 h offline', run: () => session.catchUp(60 * 60 * 1000) },
+      { label: 'Kvóty: splniť všetky', run: () => completeQuotas(store) },
+      { label: 'Kvóty: ďalší deň', run: () => nextQuotaDay(store) },
       { label: `Nesmrteľnosť: ${devFlags.god ? 'ZAP' : 'vyp'}`, run: () => (devFlags.god = !devFlags.god) },
     ];
     if (base !== undefined) {

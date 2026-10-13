@@ -7,7 +7,19 @@ import type { BuildingState, GameState, SinnerState } from '@/state/GameState';
 import { MAX_LEVEL, PENSION_BONUS, PENSION_MAX } from '@/data/careers';
 import { SINNER_KIND_DEFS, SINNER_KINDS, type SinnerKind } from '@/data/sinnerKinds';
 import { leadOf, tickBase, workersOf } from '@/systems/base/production';
-import { itemName, type Loadout, resolveLoadout } from '@/systems/loot/loot';
+import { quotaText } from '@/data/quotas';
+import {
+  applyQuotaEvent,
+  bonusReady,
+  createBoard,
+  dailyBonus,
+  isDone,
+  quotaReward,
+  type QuotaEvent,
+} from '@/systems/quotas/quotas';
+import { DAILY_BONUS_LUCK } from '@/data/quotas';
+import type { EnemyKind } from '@/data/enemies';
+import { generateItem, itemName, type Loadout, resolveLoadout } from '@/systems/loot/loot';
 import { generateSinner, isMaxLevel, levelFromXp } from '@/systems/staff/sinners';
 
 /** Cena náboru úradníka (základný typ). */
@@ -29,9 +41,15 @@ export interface GameEvents {
   inventoryChanged: null;
   buildingUnlocked: BuildingType;
   kindUnlocked: SinnerKind;
+  quotasChanged: null;
 }
 
 export type Result = { ok: true } | { ok: false; reason: string };
+
+/** Sčíta čiastkové suroviny (chýbajúce položky = 0). */
+function addAmounts(into: ResourceAmounts, a: ResourceAmounts): void {
+  for (const id of Object.keys(a) as (keyof ResourceAmounts)[]) into[id] = (into[id] ?? 0) + (a[id] ?? 0);
+}
 
 const fail = (reason: string): Result => ({ ok: false, reason });
 
@@ -49,6 +67,7 @@ export function createInitialState(seed: number): GameState {
     equipment: { melee: 'i-start-melee', ranged: 'i-start-ranged', trinket: null },
     progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0, deepestFloor: 0, bossesDefeated: 0 },
     retirees: [],
+    quotas: null,
     rngSeed: seed >>> 0,
     nextId: 1,
   };
@@ -87,6 +106,11 @@ export class GameStore {
       this.events.emit('notice', { text: `${who}. Bez kávy pracujú na polovicu – postavte Kávovar.`, tone: 'warn' });
     }
     if (cycles.length === 0 && fatigue.coffeeBreaks === 0) return;
+    if (cycles.length > 0) {
+      const produced: ResourceAmounts = {};
+      for (const r of cycles) addAmounts(produced, r.produced);
+      this.quotaEvent({ type: 'produced', amounts: produced });
+    }
     for (const r of cycles) {
       this.events.emit('cycleCompleted', { building: r.building });
       for (const s of r.levelUps) {
@@ -188,6 +212,7 @@ export class GameStore {
     this.grant({ forms });
     this.events.emit('inventoryChanged', null);
     this.events.emit('notice', { text: `Skartované: ${itemName(item)} (+${forms} F).`, tone: 'info' });
+    this.quotaEvent({ type: 'shredded' });
     return { ok: true };
   }
 
@@ -214,7 +239,9 @@ export class GameStore {
   }
 
   /** Zapíše výsledok expedície a ohlási nové odomknuté budovy. */
-  recordExpedition(won: boolean, kills: number, depth = 1, bossKills = 0): void {
+  recordExpedition(won: boolean, kills: number, depth = 1, bossKills = 0, killsByKind: Partial<Record<EnemyKind, number>> = {}): void {
+    // kvóty: mŕtvi nevykazujú – ráta sa len živý návrat
+    if (won) this.quotaEvent({ type: 'expedition', kills, killsByKind, depth, bossKills });
     const before = BUILDING_TYPES.filter((t) => this.isUnlocked(t));
     const kindsBefore = SINNER_KINDS.filter((k) => this.isKindUnlocked(k));
     const p = this.state.progress;
@@ -237,6 +264,58 @@ export class GameStore {
       this.events.emit('kindUnlocked', k);
       this.events.emit('notice', { text: `HR môže nabrať nový typ: ${SINNER_KIND_DEFS[k].name}. [T] v Personálnom prepne typ náboru.`, tone: 'info' });
     }
+  }
+
+  /** Nový deň → nové kvóty (séria pokračuje, ak včera bolo splnené všetko). Vráti `true`, ak sa vygenerovali. */
+  refreshQuotas(day: string): boolean {
+    const old = this.state.quotas;
+    if (old !== null && old.day === day) return false;
+    this.state.quotas = createBoard(this.state.rngSeed, day, this.state.progress, old);
+    this.events.emit('quotasChanged', null);
+    if (old !== null) this.events.emit('notice', { text: 'Vedenie vydalo nové denné kvóty. Plnenie je dobrovoľne povinné.', tone: 'info' });
+    return true;
+  }
+
+  private quotaEvent(ev: QuotaEvent): void {
+    const board = this.state.quotas;
+    if (board === null) return;
+    const done = applyQuotaEvent(board, ev);
+    for (const e of done) this.events.emit('notice', { text: `Kvóta splnená: ${quotaText(e.quota)}. [Q] vyzdvihnúť odmenu.`, tone: 'info' });
+    this.events.emit('quotasChanged', null);
+  }
+
+  /** Vyzdvihne odmeny za splnené kvóty (a bonus za všetky tri). Vráti počet vyzdvihnutých. */
+  claimQuotas(): number {
+    const board = this.state.quotas;
+    if (board === null) return 0;
+    const total: ResourceAmounts = {};
+    let claimed = 0;
+    for (const e of board.entries) {
+      if (e.claimed || !isDone(e)) continue;
+      e.claimed = true;
+      claimed += 1;
+      addAmounts(total, quotaReward(e, board, this.state.progress));
+    }
+    let bonus = false;
+    if (bonusReady(board)) {
+      board.bonusClaimed = true;
+      bonus = true;
+      addAmounts(total, dailyBonus(board, this.state.progress));
+      const rng = new Rng(this.state.rngSeed);
+      const item = generateItem(rng, 'quota', { luck: DAILY_BONUS_LUCK + 0.25 * this.state.progress.deepestFloor });
+      this.state.rngSeed = rng.seed;
+      this.addLoot([item]);
+    }
+    if (claimed === 0 && !bonus) return 0;
+    this.grant(total);
+    this.events.emit('quotasChanged', null);
+    this.events.emit('notice', {
+      text: bonus
+        ? `Všetky kvóty splnené! Zamestnanec dňa: +${formatAmounts(total)} a predmet. Séria: ${board.streak + 1}. deň.`
+        : `Odmena za kvóty: +${formatAmounts(total)}. Vedenie je mierne menej sklamané.`,
+      tone: 'info',
+    });
+    return claimed;
   }
 
   isKindUnlocked(kind: SinnerKind): boolean {
@@ -284,6 +363,7 @@ export class GameStore {
     this.state.rngSeed = rng.seed;
     this.state.sinners.push(s);
     this.events.emit('sinnerHired', s);
+    this.quotaEvent({ type: 'hired' });
     this.events.emit('resourcesChanged', this.state.resources);
     this.events.emit('notice', { text: `Nový zamestnanec: ${s.name}, ${def.name.toLowerCase()} (hriech: ${s.sin.toLowerCase()})`, tone: 'info' });
     return { ok: true };

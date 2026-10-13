@@ -80,6 +80,8 @@ export interface ExpeditionState {
   kills: number;
   /** Porazení bossovia počas celej výpravy (cez všetky poschodia). */
   bossKills: number;
+  /** Zabitia podľa typu (pre denné kvóty), za celú výpravu. */
+  killsByKind: Partial<Record<EnemyKind, number>>;
   /** Odmeny, ktoré sa pripíšu základni pri návrate výťahom. Pri smrti prepadnú. */
   rewards: Resources;
   /** Korisť na zemi (prepadne, ak ju nikto nezdvihne). */
@@ -131,6 +133,7 @@ export interface ExpeditionCarry {
   readonly loot: readonly Item[];
   readonly kills: number;
   readonly bossKills?: number;
+  readonly killsByKind?: Partial<Record<EnemyKind, number>>;
 }
 
 export interface ExpeditionOptions {
@@ -162,7 +165,7 @@ export function canDescend(s: ExpeditionState): boolean {
 
 /** Stav, ktorý sa prenesie na ďalšie poschodie. */
 export function carryOf(s: ExpeditionState): ExpeditionCarry {
-  return { hp: s.player.hp, rewards: { ...s.rewards }, loot: [...s.loot], kills: s.kills, bossKills: s.bossKills };
+  return { hp: s.player.hp, rewards: { ...s.rewards }, loot: [...s.loot], kills: s.kills, bossKills: s.bossKills, killsByKind: { ...s.killsByKind } };
 }
 
 export function createExpedition(
@@ -201,6 +204,7 @@ export function createExpedition(
     nextId: 1,
     kills: carry?.kills ?? 0,
     bossKills: carry?.bossKills ?? 0,
+    killsByKind: { ...(carry?.killsByKind ?? {}) },
     rewards: carry ? { ...carry.rewards } : emptyResources(),
     cleared: enemies.length === 0,
     status: 'active',
@@ -377,6 +381,7 @@ function hitEnemy(s: ExpeditionState, e: EnemyState, amount: number, from: Vec2,
     e.phase = 'dead';
     e.phaseMs = CORPSE_MS;
     s.kills += 1;
+    s.killsByKind[e.kind] = (s.killsByKind[e.kind] ?? 0) + 1;
     if (def.boss !== undefined) s.bossKills += 1;
     gain(s.rewards, scaleAmounts(def.reward, s.scaling.reward));
     ev.push({ type: 'enemyKilled', enemyId: e.id, kind: e.kind });

@@ -9,6 +9,8 @@ import { BASE_EVENTS, type BaseScene, type TileInfo } from '@/scenes/BaseScene';
 import type { SinnerState } from '@/state/GameState';
 import { session } from '@/state/session';
 import { SINNER_KIND_DEFS, SINNER_KINDS } from '@/data/sinnerKinds';
+import { quotaText, STREAK_BONUS, STREAK_MAX } from '@/data/quotas';
+import { bonusReady, dailyBonus, isDone, quotaReward } from '@/systems/quotas/quotas';
 import { COFFEE_BREAK_AT, LEAD_BONUS, MAX_LEVEL, PENSION_BONUS } from '@/data/careers';
 import { buildingRate, leadOf, workersOf } from '@/systems/base/production';
 import { burnoutMult, isMaxLevel, levelFromXp, sinnerEfficiency, xpForLevel } from '@/systems/staff/sinners';
@@ -38,6 +40,8 @@ const C = {
 } as const;
 
 const PANEL = { x: GAME_WIDTH - 262, y: 10, w: 254 } as const;
+/** Denné kvóty – vľavo, nad detailom budovy. */
+const QUOTA = { x: 16, y: 196, w: 290 } as const;
 const BAR_Y = GAME_HEIGHT - 32;
 const ROW_H = 30;
 const MAX_ROWS = 10;
@@ -62,6 +66,8 @@ export class UIScene extends Phaser.Scene {
   private toasts: Phaser.GameObjects.Text[] = [];
   private hoveredBuilding: string | null = null;
   private inventory!: InventoryPanel;
+  private quotaBg!: Phaser.GameObjects.Rectangle;
+  private quotaPanel!: Phaser.GameObjects.Container;
 
   constructor() {
     super({ key: 'UIScene' });
@@ -84,6 +90,9 @@ export class UIScene extends Phaser.Scene {
     this.add.text(PANEL.x, PANEL.y + 6, 'PERSONÁLNE ODDELENIE', this.style(12, C.accent));
     this.staff = this.add.container(0, 0);
 
+    this.quotaBg = this.blocker(this.add.rectangle(QUOTA.x - 6, QUOTA.y - 6, QUOTA.w, 80, C.panel, 0.85).setOrigin(0, 0));
+    this.quotaPanel = this.add.container(0, 0);
+
     this.createBuildBar();
     this.inventory = new InventoryPanel(this);
     this.bindKeys();
@@ -105,6 +114,7 @@ export class UIScene extends Phaser.Scene {
   // ---------- render ----------
 
   private renderAll(): void {
+    this.renderQuotas();
     this.renderResources();
     this.renderStaff();
     this.renderBuildBar();
@@ -173,6 +183,57 @@ export class UIScene extends Phaser.Scene {
     }
     this.staffBg.setSize(PANEL.w + 4, by - PANEL.y + 6);
     this.staffBg.input?.hitArea.setTo(0, 0, PANEL.w + 4, by - PANEL.y + 6);
+  }
+
+  private renderQuotas(): void {
+    this.quotaPanel.removeAll(true);
+    const { store } = session;
+    const board = store.state.quotas;
+    if (board === null) {
+      this.quotaBg.setVisible(false);
+      return;
+    }
+    this.quotaBg.setVisible(true);
+    const streak = board.streak > 0 ? ` · séria ${board.streak} d (+${pct(STREAK_BONUS * Math.min(board.streak, STREAK_MAX))} %)` : '';
+    let y = QUOTA.y;
+    const line = (text: string, color: string, size = 10): Phaser.GameObjects.Text => {
+      const t = this.add.text(QUOTA.x, y, text, this.style(size, color));
+      this.quotaPanel.add(t);
+      y += size + 4;
+      return t;
+    };
+    line(`DENNÉ KVÓTY OD VEDENIA${streak}`, C.accent, 11);
+    for (const e of board.entries) {
+      const done = isDone(e);
+      const mark = e.claimed ? '[✓]' : done ? '[!]' : '[ ]';
+      // pri „vráť sa z poschodia“ a CEO je počítadlo zbytočné – cieľ je v texte
+      const counted = e.quota.kind !== 'depth' && e.quota.kind !== 'boss';
+      const progress = done || !counted ? '' : ` ${Math.floor(e.progress)}/${e.quota.target}`;
+      const t = line(fit(`${mark} ${quotaText(e.quota)}${progress}`, 46), e.claimed ? C.dim : done ? C.good : C.text);
+      t.setInteractive().on(Phaser.Input.Events.GAMEOBJECT_POINTER_OVER, () =>
+        this.hoverText.setText(`Odmena: ${formatAmounts(quotaReward(e, board, store.state.progress))}. Kvóty sa menia o polnoci (miestny čas).`),
+      );
+    }
+    const claimable = board.entries.some((e) => isDone(e) && !e.claimed) || bonusReady(board);
+    if (claimable) {
+      const t = line('[Q] Vyzdvihnúť odmeny', C.good, 11);
+      this.clickable(t, () => this.claimQuotas());
+    } else if (!board.bonusClaimed) {
+      const t = line(`Všetky tri: +${formatAmounts(dailyBonus(board, store.state.progress))} a predmet`, C.dim);
+      t.setInteractive().on(Phaser.Input.Events.GAMEOBJECT_POINTER_OVER, () =>
+        this.hoverText.setText('Zamestnanec dňa: splňte všetky tri kvóty. Séria dní zvyšuje všetky odmeny o 10 % za deň (najviac +50 %).'),
+      );
+    } else {
+      line('Zamestnanec dňa. Zajtra znova.', C.dim);
+    }
+    this.quotaBg.setSize(QUOTA.w, y - QUOTA.y + 8);
+    this.quotaBg.input?.hitArea.setTo(0, 0, QUOTA.w, y - QUOTA.y + 8);
+  }
+
+  private claimQuotas(): void {
+    if (session.store.claimQuotas() === 0 && session.store.state.quotas?.bonusClaimed !== true) {
+      this.toast('Zatiaľ nie je čo vyzdvihnúť. Vedenie si všíma snahu, nie úmysly.', 'warn');
+    }
   }
 
   private createBuildBar(): void {
@@ -370,6 +431,7 @@ export class UIScene extends Phaser.Scene {
       else if (e.key === 'p' || e.key === 'P') this.promoteSelected();
       else if (e.key === 'r' || e.key === 'R') this.retireSelected();
       else if (e.key === 't' || e.key === 'T') this.cycleHireKind();
+      else if (e.key === 'q' || e.key === 'Q') this.claimQuotas();
       else if (e.key === 'i' || e.key === 'I') this.inventory.toggle();
       else if (e.key === 'Escape') this.escape();
     });
@@ -414,6 +476,7 @@ export class UIScene extends Phaser.Scene {
       store.events.on('inventoryChanged', () => this.renderStaff()),
       store.events.on('buildingUnlocked', () => this.renderBuildBar()),
       store.events.on('kindUnlocked', () => this.renderStaff()),
+      store.events.on('quotasChanged', () => this.renderQuotas()),
       store.events.on('notice', (n) => this.toast(n.text, n.tone)),
       ui.on('modeChanged', () => {
         this.renderMode();

@@ -9,6 +9,7 @@ import { ENEMIES } from '@/data/enemies';
 import { aliveEnemies, CORPSE_MS, type ExpeditionState } from '@/systems/combat/expedition';
 import { generateItem } from '@/systems/loot/loot';
 import { MAX_XP } from '@/systems/staff/sinners';
+import { dayKey } from '@/systems/quotas/quotas';
 
 /**
  * Vývojárske cheaty na testovanie. Čisté funkcie nad store / simuláciou – žiadny Phaser,
@@ -66,6 +67,22 @@ export function addItem(store: GameStore, rarity: Rarity): boolean {
   const rng = new Rng((store.state.rngSeed ^ store.state.nextId) >>> 0);
   store.addLoot([generateItem(rng, 'dev', { rarity })]);
   return true;
+}
+
+/** Splní všetky dnešné kvóty (odmeny treba vyzdvihnúť cez [Q]). */
+export function completeQuotas(store: GameStore): void {
+  const board = store.state.quotas;
+  if (board === null) return;
+  for (const e of board.entries) e.progress = e.quota.target;
+  store.events.emit('quotasChanged', null);
+}
+
+/** Posunie kvóty na nasledujúci deň (séria pokračuje, ak bol bonus vyzdvihnutý). */
+export function nextQuotaDay(store: GameStore): void {
+  const day = store.state.quotas?.day;
+  const base = day === undefined ? new Date() : new Date(`${day}T12:00:00`);
+  base.setDate(base.getDate() + 1);
+  store.refreshQuotas(dayKey(base));
 }
 
 // ---------------------------------------------------------------- expedícia
