@@ -1,15 +1,9 @@
 import Phaser from 'phaser';
-import { type AssetKey, variantCount } from '@/assets/manifest';
+import { type AssetKey, type MapTheme, THEMES, variantCount } from '@/assets/manifest';
 import { FLOOR_DEPTH, TILE_HEIGHT, TILE_WIDTH } from '@/config/constants';
 import { worldToScreen } from '@/core/iso';
 import { IsoSprite } from '@/world/IsoSprite';
 import { type ParsedMap, type PropPlacement, tileVariant } from '@/world/TileGrid';
-
-const PROP_TEXTURE: Readonly<Record<PropPlacement['kind'], AssetKey>> = {
-  wall: 'block_wall',
-  pillar: 'block_pillar',
-  desk: 'block_desk',
-};
 
 const OCCLUDER_ALPHA = 0.35;
 
@@ -20,19 +14,27 @@ export class IsoMapView {
   /** Bloky, ktoré môžu zakryť postavu – pre priehľadnosť pri prekrytí. */
   readonly occluders: IsoSprite[];
 
-  constructor(scene: Phaser.Scene, map: ParsedMap) {
+  constructor(scene: Phaser.Scene, map: ParsedMap, theme: MapTheme = THEMES.office) {
     const { grid } = map;
-    const floorVariants = variantCount('tile_floor');
+    const propTexture: Readonly<Record<PropPlacement['kind'], AssetKey>> = { wall: theme.wall, pillar: theme.pillar, desk: theme.desk };
+    const floorVariants = variantCount(theme.floor);
     for (let ty = 0; ty < grid.height; ty++) {
       for (let tx = 0; tx < grid.width; tx++) {
-        if (grid.get(tx, ty) === 'void') continue;
+        const kind = grid.get(tx, ty);
+        if (kind === 'void') continue;
         const s = worldToScreen({ x: tx, y: ty });
-        scene.add.image(s.x, s.y, 'tile_floor', tileVariant(tx, ty, floorVariants)).setDepth(FLOOR_DEPTH);
+        if (kind === 'elevator') {
+          const pad = scene.add.image(s.x, s.y, theme.elevator).setDepth(FLOOR_DEPTH);
+          scene.tweens.add({ targets: pad, alpha: 0.55, duration: 900, yoyo: true, repeat: -1 });
+        } else {
+          const tile = scene.add.image(s.x, s.y, theme.floor, tileVariant(tx, ty, floorVariants)).setDepth(FLOOR_DEPTH);
+          if (theme.floorTint !== undefined) tile.setTint(theme.floorTint);
+        }
       }
     }
 
     this.occluders = map.props.map((prop) => {
-      const key = PROP_TEXTURE[prop.kind];
+      const key = propTexture[prop.kind];
       const frame = tileVariant(prop.tx, prop.ty, variantCount(key));
       return new IsoSprite(scene, key, { x: prop.tx, y: prop.ty }, { frame });
     });

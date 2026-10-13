@@ -59,6 +59,12 @@ export function generatePlaceholder(scene: Phaser.Scene, key: string, spec: Plac
       g.fillStyle(0x8b1e2d, 1).fillTriangle(w / 2 - 3, h * 0.38, w / 2 + 3, h * 0.38, w / 2, h * 0.7);
       break;
     }
+    case 'rect': {
+      w = spec.width;
+      h = spec.height;
+      g.fillStyle(spec.fill, 1).fillRect(0, 0, w, h);
+      break;
+    }
     case 'shadow': {
       w = spec.width;
       h = spec.height;

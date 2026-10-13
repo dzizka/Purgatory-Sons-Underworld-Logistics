@@ -58,7 +58,7 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 
 ---
 
-## Fáza 4 – Expedícia: ARPG boj
+## Fáza 4 – Expedícia: ARPG boj ✅
 **Cieľ:** Akčná slučka.
 
 - `ExpeditionScene` – generovaná/ručná mapa „Oddelenie reklamácií“
@@ -69,9 +69,9 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - Prechod Základňa ↔ Expedícia; produkcia na základni beží ďalej (Zeigarnik)
 
 **Definition of Done**
-- [ ] Viem dokončiť expedíciu (zabiť všetkých / dôjsť k výťahu) a vrátiť sa
-- [ ] Boj je čitateľný (feedback na zásah, telegrafované útoky nepriateľov)
-- [ ] Stabilných 60 FPS pri 50+ nepriateľoch na desktope
+- [x] Viem dokončiť expedíciu (zabiť všetkých / dôjsť k výťahu) a vrátiť sa
+- [x] Boj je čitateľný (feedback na zásah, telegrafované útoky nepriateľov)
+- [x] Stabilných 60 FPS pri 50+ nepriateľoch na desktope *(simulácia 60 nepriateľov < 4 ms/krok – test v CI; vykresľovanie overiť na reálnom HW)*
 
 ---
 

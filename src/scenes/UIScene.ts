@@ -16,6 +16,7 @@ const TILE_LABEL: Readonly<Record<TileKind, string>> = {
   wall: 'Nosná stena (nosí hlavne výčitky)',
   pillar: 'Blok pekelného kameňa – firemné hodnoty',
   desk: 'Pracovný stôl, model „Večný Open-space“',
+  elevator: 'Služobný výťah do Oddelenia reklamácií (E = nastúpiť)',
   void: 'Nič',
 };
 
@@ -61,6 +62,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   create(): void {
+    // scéna sa pri návrate z expedície spúšťa znova – staré objekty už neexistujú
+    this.toasts = [];
+    this.buildButtons = [];
+    this.hoveredBuilding = null;
     this.add.text(12, 10, 'PURGATORY & LOGISTICS · Oddelenie spracovania duší', this.style(13, C.accent));
     this.resourceText = this.add.text(12, 30, '', this.style(13, C.text));
     this.hoverText = this.add.text(12, 50, '', this.style(11, C.muted)).setWordWrapWidth(PANEL.x - 24);

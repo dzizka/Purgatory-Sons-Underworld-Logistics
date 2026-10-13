@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '@/config/constants';
 import { BaseScene } from '@/scenes/BaseScene';
 import { BootScene } from '@/scenes/BootScene';
+import { ExpeditionScene } from '@/scenes/ExpeditionScene';
+import { ExpeditionUIScene } from '@/scenes/ExpeditionUIScene';
 import { UIScene } from '@/scenes/UIScene';
 import { session } from '@/state/session';
 
@@ -17,7 +19,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, BaseScene, UIScene],
+  scene: [BootScene, BaseScene, UIScene, ExpeditionScene, ExpeditionUIScene],
 };
 
 const game = new Phaser.Game(config);

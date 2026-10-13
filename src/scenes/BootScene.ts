@@ -37,6 +37,5 @@ export class BootScene extends Phaser.Scene {
       }
     }
     this.scene.start('BaseScene');
-    this.scene.launch('UIScene');
   }
 }
