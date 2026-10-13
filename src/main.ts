@@ -3,6 +3,7 @@ import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '@/config/constants';
 import { BaseScene } from '@/scenes/BaseScene';
 import { BootScene } from '@/scenes/BootScene';
 import { UIScene } from '@/scenes/UIScene';
+import { session } from '@/state/session';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO, // WebGL s fallbackom na Canvas
@@ -20,6 +21,11 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const game = new Phaser.Game(config);
+
+// Simulácia základne beží nezávisle od aktívnej scény (aj počas expedícií).
+game.events.on(Phaser.Core.Events.STEP, (_time: number, delta: number) => {
+  session.store.tick(Math.min(delta, 250));
+});
 
 declare global {
   interface Window {

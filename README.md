@@ -16,7 +16,20 @@ npm run preview    # lokálny náhľad produkčného buildu
 
 ## Ovládanie
 
-WASD / šípky – pohyb · koliesko myši – zoom · klik – inšpekcia dlaždice · M – hudba on/off
+| Vstup | Akcia |
+|---|---|
+| WASD / šípky | pohyb manažéra |
+| koliesko myši | zoom |
+| 1 – 5 | stavebný režim (Podateľňa, Kávovar, Kopírka, Mučiareň, Školiaca miestnosť), Shift + klik = stavať viackrát |
+| klik na hriešnika (vo svete alebo v Personálnom) → klik na budovu | pridelenie do práce |
+| U | poslať vybraného hriešnika do čakárne |
+| H | nábor nového hriešnika (3 duše) |
+| klik na budovu | detail: stav, recept, efektivita pracovníkov |
+| Esc / pravé tlačidlo | zrušiť režim |
+| M | hudba on/off |
+
+**Ekonomika:** Podateľňa → Duše · Kávovar → Káva · Kopírka: Duša → 3 Formuláre · Mučiareň: Duša + 2 Formuláre + Káva → 6 Síry · Školiaca miestnosť: Káva → XP.
+Vlastnosti hriešnikov (Workoholik, Prokrastinátor, Mikromanažér, Introvert…) menia výkon; skúsenosti zvyšujú úroveň (+10 % / level).
 
 S `?debug` v URL je inštancia hry dostupná v konzole ako `window.__game`.
 

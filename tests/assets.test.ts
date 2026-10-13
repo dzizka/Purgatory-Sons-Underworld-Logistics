@@ -30,3 +30,11 @@ describe('manifest assetov', () => {
     expect(existsSync(join(PUBLIC, AUDIO[key].url))).toBe(true);
   });
 });
+
+describe('väzby dát na assety', () => {
+  it('každý vzhľad hriešnika má textúru', async () => {
+    const { SINNER_TEXTURES } = await import('@/assets/manifest');
+    const { SINNER_LOOKS } = await import('@/systems/staff/sinners');
+    expect(SINNER_TEXTURES).toHaveLength(SINNER_LOOKS);
+  });
+});
