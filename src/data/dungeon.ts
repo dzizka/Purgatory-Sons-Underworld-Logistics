@@ -39,6 +39,10 @@ export interface DepthScaling {
   readonly enemyCount: number;
   /** Podiel compliance officerov medzi nepriateľmi. */
   readonly complianceShare: number;
+  /** Podiel byrokratických slizov (od 2. poschodia). */
+  readonly slimeShare: number;
+  /** Podiel právnikov protistrany (od 3. poschodia). */
+  readonly counselShare: number;
 }
 
 /** Každé poschodie nižšie je ťažšie – a štedrejšie. */
@@ -51,5 +55,7 @@ export function depthScaling(depth: number): DepthScaling {
     luck: 0.25 * d,
     enemyCount: Math.min(30, 8 + 3 * d),
     complianceShare: Math.min(0.5, 0.15 + 0.07 * d),
+    slimeShare: depth >= 2 ? Math.min(0.25, 0.12 + 0.03 * (d - 1)) : 0,
+    counselShare: depth >= 3 ? Math.min(0.2, 0.1 + 0.03 * (d - 2)) : 0,
   };
 }
