@@ -1,7 +1,9 @@
 import { CLEAR_BONUS, ENEMIES, type EnemyKind } from '@/data/enemies';
 import { PLAYER } from '@/data/player';
 import { emptyResources, gain, type Resources } from '@/data/resources';
-import { WEAPONS } from '@/data/weapons';
+import { Rng } from '@/core/rng';
+import type { Item } from '@/data/items';
+import { generateItem, type Loadout, resolveLoadout } from '@/systems/loot/loot';
 import { applyHit, distance, type Fighter, inArc, type MutVec, normalize, stepKnockback } from '@/systems/combat/combat';
 import { inputToWorldVelocity, moveWithCollision, type CollisionGrid, type Vec2 } from '@/systems/movement/movement';
 
@@ -42,7 +44,19 @@ export interface Projectile {
 
 export type ExpeditionStatus = 'active' | 'won' | 'lost';
 
+export interface LootDrop {
+  readonly id: number;
+  readonly item: Item;
+  readonly pos: Vec2;
+}
+
+/** Šanca na korisť z vybavenia všetkých reklamácií: lepšia rarita. */
+const CLEAR_LUCK = 1.5;
+/** Ako blízko musí manažér prejsť, aby korisť zdvihol. */
+const PICKUP_RADIUS = 0.55;
+
 export interface ExpeditionState {
+  readonly loadout: Loadout;
   player: PlayerCombat;
   enemies: EnemyState[];
   projectiles: Projectile[];
@@ -50,9 +64,14 @@ export interface ExpeditionState {
   kills: number;
   /** Odmeny, ktoré sa pripíšu základni pri návrate výťahom. Pri smrti prepadnú. */
   rewards: Resources;
+  /** Korisť na zemi (prepadne, ak ju nikto nezdvihne). */
+  drops: LootDrop[];
+  /** Zdvihnutá korisť – pripíše sa pri návrate výťahom, pri smrti prepadá. */
+  loot: Item[];
   cleared: boolean;
   status: ExpeditionStatus;
   timeMs: number;
+  readonly rng: Rng;
 }
 
 export interface ExpeditionInput {
@@ -76,15 +95,33 @@ export type ExpeditionEvent =
   | { readonly type: 'playerHit'; readonly amount: number }
   | { readonly type: 'playerDied' }
   | { readonly type: 'dash' }
-  | { readonly type: 'cleared' };
+  | { readonly type: 'cleared' }
+  | { readonly type: 'lootDropped'; readonly dropId: number }
+  | { readonly type: 'lootPicked'; readonly dropId: number; readonly item: Item };
 
-export function createExpedition(spawn: Vec2, enemies: readonly { kind: EnemyKind; tx: number; ty: number }[]): ExpeditionState {
+export interface ExpeditionOptions {
+  /** Výbava manažéra; predvolene základná dierovačka a sponkovačka. */
+  readonly loadout?: Loadout;
+  /** Seed pre korisť – rovnaký seed, rovnaké dropy. */
+  readonly seed?: number;
+}
+
+export function createExpedition(
+  spawn: Vec2,
+  enemies: readonly { kind: EnemyKind; tx: number; ty: number }[],
+  opts: ExpeditionOptions = {},
+): ExpeditionState {
   let nextId = 1;
+  const loadout = opts.loadout ?? resolveLoadout({});
   return {
+    loadout,
+    rng: new Rng(opts.seed ?? 1),
+    drops: [],
+    loot: [],
     player: {
       pos: { x: spawn.x, y: spawn.y },
-      hp: PLAYER.maxHp,
-      maxHp: PLAYER.maxHp,
+      hp: loadout.maxHp,
+      maxHp: loadout.maxHp,
       radius: PLAYER.radius,
       invulnMs: 0,
       knock: { x: 0, y: 0 },
@@ -152,13 +189,13 @@ export function stepExpedition(s: ExpeditionState, input: ExpeditionInput, dtMs:
   }
 
   // --- pohyb a úskok ---
-  const walk = inputToWorldVelocity(input.move.x, input.move.y, PLAYER.speedPx);
+  const walk = inputToWorldVelocity(input.move.x, input.move.y, s.loadout.speedPx);
   if (input.dash && p.dashCdMs === 0 && p.dashMs === 0) {
     const dir = walk.x !== 0 || walk.y !== 0 ? normalize(walk) : p.aim;
     p.dashDir.x = dir.x * PLAYER.dash.speed;
     p.dashDir.y = dir.y * PLAYER.dash.speed;
     p.dashMs = PLAYER.dash.durationMs;
-    p.dashCdMs = PLAYER.dash.cooldownMs;
+    p.dashCdMs = s.loadout.dashCooldownMs;
     p.invulnMs = Math.max(p.invulnMs, PLAYER.dash.invulnMs);
     ev.push({ type: 'dash' });
   }
@@ -171,7 +208,7 @@ export function stepExpedition(s: ExpeditionState, input: ExpeditionInput, dtMs:
 
   // --- útoky ---
   if (input.melee && p.meleeCdMs === 0) {
-    const w = WEAPONS.puncher;
+    const w = s.loadout.melee;
     p.meleeCdMs = w.cooldownMs;
     ev.push({ type: 'swing', aim: { ...p.aim } });
     for (const e of aliveEnemies(s)) {
@@ -181,7 +218,7 @@ export function stepExpedition(s: ExpeditionState, input: ExpeditionInput, dtMs:
     }
   }
   if (input.ranged && p.rangedCdMs === 0) {
-    const w = WEAPONS.stapler;
+    const w = s.loadout.ranged;
     p.rangedCdMs = w.cooldownMs;
     const id = s.nextId++;
     s.projectiles.push({
@@ -200,13 +237,21 @@ export function stepExpedition(s: ExpeditionState, input: ExpeditionInput, dtMs:
     pr.pos.y += step.y;
     pr.travelled += Math.hypot(step.x, step.y);
     const hit = aliveEnemies(s).find((e) => distance(e.pos, pr.pos) < e.radius + 0.08);
-    const w = WEAPONS.stapler;
+    const w = s.loadout.ranged;
     if (hit !== undefined) {
       hitEnemy(s, hit, w.damage, { x: pr.pos.x - pr.vel.x, y: pr.pos.y - pr.vel.y }, w.knockback, ev);
     }
     const gone = hit !== undefined || pr.travelled >= w.range || grid.isBlocked(Math.round(pr.pos.x), Math.round(pr.pos.y));
     if (gone) ev.push({ type: 'projectileGone', projectileId: pr.id });
     return !gone;
+  });
+
+  // --- korisť: zdvihne sa prechodom ---
+  s.drops = s.drops.filter((d) => {
+    if (distance(d.pos, p.pos) > PICKUP_RADIUS) return true;
+    s.loot.push(d.item);
+    ev.push({ type: 'lootPicked', dropId: d.id, item: d.item });
+    return false;
   });
 
   // --- nepriatelia ---
@@ -222,6 +267,8 @@ export function stepExpedition(s: ExpeditionState, input: ExpeditionInput, dtMs:
     s.cleared = true;
     gain(s.rewards, CLEAR_BONUS);
     ev.push({ type: 'cleared' });
+    // garantovaná odmena za vybavenie všetkého – pri nohách manažéra
+    dropLoot(s, { x: p.pos.x + 0.6, y: p.pos.y + 0.6 }, CLEAR_LUCK, ev);
   }
   return ev;
 }
@@ -236,6 +283,7 @@ function hitEnemy(s: ExpeditionState, e: EnemyState, amount: number, from: Vec2,
     s.kills += 1;
     gain(s.rewards, def.reward);
     ev.push({ type: 'enemyKilled', enemyId: e.id, kind: e.kind });
+    if (s.rng.chance(def.lootChance)) dropLoot(s, { x: e.pos.x, y: e.pos.y }, 0, ev);
     return;
   }
   // zásah prebudí aj spiaceho audítora
@@ -244,6 +292,12 @@ function hitEnemy(s: ExpeditionState, e: EnemyState, amount: number, from: Vec2,
     e.phase = 'recover';
     e.phaseMs = def.recoverMs * 0.6;
   }
+}
+
+function dropLoot(s: ExpeditionState, pos: Vec2, luck: number, ev: ExpeditionEvent[]): void {
+  const id = s.nextId++;
+  s.drops.push({ id, item: generateItem(s.rng, `loot-${id}`, { luck }), pos });
+  ev.push({ type: 'lootDropped', dropId: id });
 }
 
 function stepEnemy(s: ExpeditionState, e: EnemyState, dtMs: number, grid: CollisionGrid, ev: ExpeditionEvent[]): void {

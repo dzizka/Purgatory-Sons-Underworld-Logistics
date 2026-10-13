@@ -75,19 +75,19 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 
 ---
 
-## Fáza 5 – Loot & progresia
+## Fáza 5 – Loot & progresia ✅
 **Cieľ:** Variable reward schedule.
 
 - Loot tabuľky s váhami a raritami (Bežné / Byrokratické / Legendárne / Prekliate)
 - Generované afixy s humorom: *„…zamestnanca mesiaca (posmrtne)“*, *„Prokrastinujúca“* (+50 % dmg, útočí s oneskorením)
-- Inventár + vybavenie, porovnanie štatistík
-- Expedičné odmeny → suroviny pre základňu (prepojenie slučiek)
-- Odomykanie nových budov a typov hriešnikov
+- Inventár (16 miest) + vybavenie (úder, strela, talizman), porovnanie štatistík, skartovanie na formuláre
+- Expedičné odmeny → suroviny pre základňu (prepojenie slučiek); korisť na zemi treba zdvihnúť, pri smrti prepadá
+- Odomykanie budov (Mučiareň po 1. úspešnej expedícii, Školiaca miestnosť po 10 vybavených reklamáciách); nové typy hriešnikov presunuté do backlogu
 
 **Definition of Done**
-- [ ] Každá expedícia dropne náhodný loot, rarita je viditeľná
-- [ ] Rozdelenie dropov zodpovedá váham (štatistický unit test na seedovanom RNG)
-- [ ] Vybavenie mení štatistiky v boji
+- [x] Každá expedícia dropne náhodný loot (vybavenie mapy = garantovaný predmet so šťastím), rarita je viditeľná farbou
+- [x] Rozdelenie dropov zodpovedá váham (štatistický unit test na seedovanom RNG)
+- [x] Vybavenie mení štatistiky v boji
 
 ---
 

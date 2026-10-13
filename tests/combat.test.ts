@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CLEAR_BONUS, ENEMIES } from '@/data/enemies';
 import { PLAYER } from '@/data/player';
-import { WEAPONS } from '@/data/weapons';
+import { BASE_ITEMS } from '@/data/items';
 import { applyHit, inArc, type Fighter } from '@/systems/combat/combat';
 import {
   createExpedition,
@@ -58,7 +58,7 @@ describe('combat primitívy', () => {
 describe('expedícia – hráč', () => {
   it('dierovačka zabije audítora na 3 zásahy a pripíše odmenu', () => {
     const s = createExpedition({ x: 3, y: 3 }, [{ kind: 'auditor', tx: 4, ty: 3 }]);
-    const hits = Math.ceil(ENEMIES.auditor.maxHp / WEAPONS.puncher.damage);
+    const hits = Math.ceil(ENEMIES.auditor.maxHp / BASE_ITEMS.puncher.stats.damage);
     expect(hits).toBe(3);
     // stále drží útok a mieri na nepriateľa
     const ev = run(s, 3000, () => ({ ...idle(s.enemies[0]?.pos ?? { x: 4, y: 3 }), melee: true }));

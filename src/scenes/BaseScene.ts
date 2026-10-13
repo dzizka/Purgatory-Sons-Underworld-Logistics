@@ -3,6 +3,7 @@ import { AUDIO } from '@/assets/manifest';
 import { FLOOR_DEPTH } from '@/config/constants';
 import { screenToWorld, worldToScreen } from '@/core/iso';
 import { BUILDINGS } from '@/data/buildings';
+import { RARITIES, RARITY } from '@/data/items';
 import type { ExpeditionOutcome } from '@/scenes/ExpeditionScene';
 import { formatAmounts, RESOURCE_IDS, type ResourceAmounts } from '@/data/resources';
 import { Player } from '@/entities/Player';
@@ -10,6 +11,7 @@ import { SinnerView } from '@/entities/SinnerView';
 import type { BuildingState } from '@/state/GameState';
 import { session } from '@/state/session';
 import { workersOf } from '@/systems/base/production';
+import { itemName } from '@/systems/loot/loot';
 import { workerSlots } from '@/systems/base/slots';
 import type { CollisionGrid } from '@/systems/movement/movement';
 import { BuildingView } from '@/world/BuildingView';
@@ -130,9 +132,15 @@ export class BaseScene extends Phaser.Scene {
         text: `Expedícia ukončená. Vybavené reklamácie: ${outcome.kills}. Odmena: ${formatAmounts(outcome.rewards)}.`,
         tone: 'info',
       });
+      if (outcome.loot.length > 0) {
+        const best = [...outcome.loot].sort((a, b) => RARITIES.indexOf(b.rarity) - RARITIES.indexOf(a.rarity))[0];
+        const bestText = best === undefined ? '' : ` Najlepší: [${RARITY[best.rarity].name}] ${itemName(best)}.`;
+        events.emit('notice', { text: `Nové predmety v sklade: ${outcome.loot.length} (I = sklad).${bestText}`, tone: 'info' });
+      }
     } else {
+      const lost = outcome.loot.length > 0 ? ` a ${outcome.loot.length} predmetov` : '';
       events.emit('notice', {
-        text: `Disciplinárne konanie. Korisť (${formatAmounts(outcome.rewards)}) skonfiškovaná v prospech vedenia.`,
+        text: `Disciplinárne konanie. Korisť (${formatAmounts(outcome.rewards)}${lost}) skonfiškovaná v prospech vedenia.`,
         tone: 'warn',
       });
     }

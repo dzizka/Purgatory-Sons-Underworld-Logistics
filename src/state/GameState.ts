@@ -1,4 +1,5 @@
 import type { BuildingType } from '@/data/buildings';
+import type { Item, ItemSlot } from '@/data/items';
 import type { Resources } from '@/data/resources';
 import type { TraitId } from '@/data/traits';
 
@@ -10,6 +11,11 @@ export interface GameState {
   resources: Resources;
   buildings: BuildingState[];
   sinners: SinnerState[];
+  /** Sklad predmetov (aj tých, čo má manažér práve na sebe). */
+  inventory: Item[];
+  /** id predmetu v každom slote výbavy */
+  equipment: Record<ItemSlot, string | null>;
+  progress: ProgressState;
   rngSeed: number;
   nextId: number;
 }
@@ -36,4 +42,10 @@ export interface SinnerState {
   readonly look: number;
   xp: number;
   assignedTo: string | null;
+}
+
+export interface ProgressState {
+  expeditionsWon: number;
+  expeditionsLost: number;
+  kills: number;
 }

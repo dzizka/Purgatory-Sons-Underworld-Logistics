@@ -14,6 +14,8 @@ export interface BuildingDef {
   /** XP pre každého pracovníka za cyklus (okrem bežných XP za prácu). */
   readonly trainingXp?: number;
   readonly maxWorkers: number;
+  /** Podmienka odomknutia (bez nej je budova dostupná od začiatku). */
+  readonly unlock?: { readonly expeditionsWon?: number; readonly kills?: number; readonly hint: string };
 }
 
 export const BUILDINGS: Readonly<Record<BuildingType, BuildingDef>> = {
@@ -52,6 +54,7 @@ export const BUILDINGS: Readonly<Record<BuildingType, BuildingDef>> = {
     inputs: { souls: 1, forms: 2, coffee: 1 },
     outputs: { sulfur: 6 },
     maxWorkers: 3,
+    unlock: { expeditionsWon: 1, hint: 'vráťte sa živý z 1 expedície' },
   },
   training: {
     name: 'Školiaca miestnosť',
@@ -62,5 +65,6 @@ export const BUILDINGS: Readonly<Record<BuildingType, BuildingDef>> = {
     outputs: {},
     trainingXp: 15,
     maxWorkers: 3,
+    unlock: { kills: 10, hint: 'vybavte 10 reklamácií' },
   },
 };

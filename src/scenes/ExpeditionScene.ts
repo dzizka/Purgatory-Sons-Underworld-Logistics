@@ -5,10 +5,11 @@ import { screenToWorld, worldToScreen } from '@/core/iso';
 import { ENEMIES } from '@/data/enemies';
 import { PLAYER } from '@/data/player';
 import type { Resources } from '@/data/resources';
-import { WEAPONS } from '@/data/weapons';
+import { type Item, RARITY } from '@/data/items';
 import { punyAnimKey, registerPunyAnims, type PunyClip } from '@/entities/punyAnims';
 import type { BaseSceneData } from '@/scenes/BaseScene';
 import { session } from '@/state/session';
+import { itemName } from '@/systems/loot/loot';
 import {
   createExpedition,
   type EnemyState,
@@ -30,7 +31,13 @@ const OVERLAY_DEPTH = 950_000;
 /** Výška letiacej sponky nad zemou (px). */
 const PROJECTILE_Z = 14;
 
-export type ExpeditionOutcome = { readonly result: 'won' | 'lost'; readonly rewards: Resources; readonly kills: number };
+export type ExpeditionOutcome = {
+  readonly result: 'won' | 'lost';
+  readonly rewards: Resources;
+  readonly kills: number;
+  /** Zdvihnutá korisť (pri prehre prepadla – je tu iba na oznámenie). */
+  readonly loot: readonly Item[];
+};
 
 interface EnemyView {
   sprite: IsoSprite;
@@ -60,6 +67,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private attackClip: PunyClip = 'sword';
   private readonly enemyViews = new Map<number, EnemyView>();
   private readonly projectileViews = new Map<number, IsoSprite>();
+  private readonly dropViews = new Map<number, IsoSprite>();
   private telegraphs!: Phaser.GameObjects.Graphics;
   private hitBars!: Phaser.GameObjects.Graphics;
   private keys!: Keys;
@@ -76,12 +84,16 @@ export class ExpeditionScene extends Phaser.Scene {
     this.hitStopMs = 0;
     this.enemyViews.clear();
     this.projectileViews.clear();
+    this.dropViews.clear();
 
     const map = parseMap(COMPLAINTS_DEPT);
     this.grid = map.grid;
     this.elevatorTiles = new Set(map.elevators.map((e) => `${e.tx},${e.ty}`));
     this.view = new IsoMapView(this, map, THEMES.complaints);
-    this.sim = createExpedition(map.spawn, map.enemies);
+    this.sim = createExpedition(map.spawn, map.enemies, {
+      loadout: session.store.loadout(),
+      seed: Math.floor(Math.random() * 2 ** 32),
+    });
 
     registerPunyAnims(this, 'char_player');
     this.playerShadow = new IsoSprite(this, 'fx_shadow', map.spawn, { depthBias: -0.5 });
@@ -146,6 +158,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.syncPlayer();
     this.syncEnemies();
     this.syncProjectiles();
+    this.syncDrops();
     this.view.fadeOccluders(this.player);
 
     if (!this.finished && this.sim.status === 'active' && this.onElevator && Phaser.Input.Keyboard.JustDown(this.keys.use)) {
@@ -229,6 +242,20 @@ export class ExpeditionScene extends Phaser.Scene {
       case 'cleared':
         this.cameras.main.flash(250, 120, 200, 120);
         break;
+      case 'lootDropped': {
+        const d = this.sim.drops.find((x) => x.id === e.dropId);
+        if (d === undefined) break;
+        const v = new IsoSprite(this, 'fx_loot', { x: d.pos.x, y: d.pos.y, z: 8 }).setTint(RARITY[d.item.rarity].tint);
+        this.dropViews.set(d.id, v);
+        break;
+      }
+      case 'lootPicked': {
+        this.dropViews.get(e.dropId)?.destroy();
+        this.dropViews.delete(e.dropId);
+        const r = RARITY[e.item.rarity];
+        this.floatText(this.player.x, this.player.y - 58, `[${r.name}] ${itemName(e.item)}`, r.color, 1600);
+        break;
+      }
       case 'dash':
       case 'windup':
         break;
@@ -297,6 +324,12 @@ export class ExpeditionScene extends Phaser.Scene {
     }
   }
 
+  /** Korisť sa pomaly vznáša, aby si ju hráč všimol. */
+  private syncDrops(): void {
+    const t = this.sim.timeMs / 300;
+    for (const d of this.sim.drops) this.dropViews.get(d.id)?.setWorld(d.pos.x, d.pos.y, 8 + Math.sin(t + d.id) * 3);
+  }
+
   private syncProjectiles(): void {
     for (const pr of this.sim.projectiles) this.projectileViews.get(pr.id)?.setWorld(pr.pos.x, pr.pos.y, PROJECTILE_Z);
   }
@@ -311,7 +344,7 @@ export class ExpeditionScene extends Phaser.Scene {
   }
 
   private drawSwing(aim: Vec2): void {
-    const w = WEAPONS.puncher;
+    const w = this.sim.loadout.melee;
     const g = this.add.graphics().setDepth(OVERLAY_DEPTH - 2);
     const pts = this.arcPoints(this.sim.player.pos, aim, w.range, (w.halfArcDeg * Math.PI) / 180);
     // výsek je na zemi, efekt kreslíme vo výške pása
@@ -332,12 +365,12 @@ export class ExpeditionScene extends Phaser.Scene {
     return pts;
   }
 
-  private floatText(x: number, y: number, text: string, color: string): void {
+  private floatText(x: number, y: number, text: string, color: string, durationMs = 750): void {
     const t = this.add
       .text(x, y, text, { fontFamily: 'monospace', fontSize: '11px', color, stroke: '#000000', strokeThickness: 3 })
       .setOrigin(0.5)
       .setDepth(OVERLAY_DEPTH);
-    this.tweens.add({ targets: t, y: y - 22, alpha: 0, duration: 750, onComplete: () => t.destroy() });
+    this.tweens.add({ targets: t, y: y - 22, alpha: 0, duration: durationMs, onComplete: () => t.destroy() });
   }
 
   private killQuip(kind: EnemyState['kind']): string {
@@ -353,8 +386,18 @@ export class ExpeditionScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     const won = this.sim.status === 'won';
-    const outcome: ExpeditionOutcome = { result: won ? 'won' : 'lost', rewards: { ...this.sim.rewards }, kills: this.sim.kills };
-    if (won) session.store.grant(outcome.rewards);
+    const outcome: ExpeditionOutcome = {
+      result: won ? 'won' : 'lost',
+      rewards: { ...this.sim.rewards },
+      kills: this.sim.kills,
+      loot: [...this.sim.loot],
+    };
+    const { store } = session;
+    if (won) {
+      store.grant(outcome.rewards);
+      store.addLoot(outcome.loot);
+    }
+    store.recordExpedition(won, outcome.kills);
     this.events.emit('finished', outcome);
     this.time.delayedCall(won ? 400 : 2600, () => {
       this.cameras.main.fadeOut(350);

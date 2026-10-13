@@ -22,6 +22,8 @@ export interface EnemyDef {
   /** Zásah počas nápriahu ho preruší. */
   readonly staggerable: boolean;
   readonly reward: ResourceAmounts;
+  /** Šanca, že po smrti nechá predmet. */
+  readonly lootChance: number;
 }
 
 export const ENEMIES: Readonly<Record<EnemyKind, EnemyDef>> = {
@@ -39,6 +41,7 @@ export const ENEMIES: Readonly<Record<EnemyKind, EnemyDef>> = {
     knockbackTaken: 1,
     staggerable: true,
     reward: { souls: 1 },
+    lootChance: 0.2,
   },
   compliance: {
     name: 'Compliance officer',
@@ -54,6 +57,7 @@ export const ENEMIES: Readonly<Record<EnemyKind, EnemyDef>> = {
     knockbackTaken: 0.35,
     staggerable: false,
     reward: { souls: 2, forms: 3 },
+    lootChance: 0.5,
   },
 };
 

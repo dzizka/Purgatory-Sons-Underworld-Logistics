@@ -97,7 +97,7 @@ WorldY = (ScreenY / (TH/2) - ScreenX / (TW/2)) / 2
 │   ├── systems/                  # čistá logika (bez Phaseru)
 │   │   ├── movement/             #   input → velocity, kolízie s gridom
 │   │   ├── combat/               #   zbrane, damage, výseky, projektily, AI nepriateľov, celá simulácia expedície
-│   │   ├── loot/                 #   tabuľky lootu, afixy („Prokrastinujúci“, „S výpoveďou“)
+│   │   ├── loot/                 #   rarity, afixy, generovanie predmetov, názvy so zhodou rodu, výbava → štatistiky
 │   │   ├── base/                 #   budovy, produkčné reťazce, zdroje
 │   │   └── staff/                #   generovanie hriešnikov, traity, tréning, priradenie
 │   ├── state/
@@ -105,7 +105,7 @@ WorldY = (ScreenY / (TH/2) - ScreenX / (TW/2)) / 2
 │   │   ├── store.ts              # in-memory store + príkazy
 │   │   ├── session.ts            # aktívna relácia: store + zdieľaný stav UI (režim, výber)
 │   │   └── save.ts               # localStorage, verzie, migrácie (Fáza 6)
-│   ├── ui/                       # HUD komponenty, okná, tooltipy
+│   ├── ui/                       # HUD komponenty (InventoryPanel – sklad a výbava)
 │   ├── data/                     # statické definície (JSON/TS): budovy, zbrane, traity, texty
 │   └── types/                    # zdieľané typy
 ├── tests/                        # Vitest unit testy pre core/ a systems/

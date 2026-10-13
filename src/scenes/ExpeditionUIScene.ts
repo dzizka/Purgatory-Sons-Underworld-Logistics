@@ -1,8 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '@/config/constants';
-import { PLAYER } from '@/data/player';
 import { formatAmounts, RESOURCE_IDS, RESOURCE_INFO } from '@/data/resources';
-import { WEAPONS } from '@/data/weapons';
 import type { ExpeditionOutcome, ExpeditionScene } from '@/scenes/ExpeditionScene';
 import { session } from '@/state/session';
 import { aliveEnemies } from '@/systems/combat/expedition';
@@ -35,7 +33,7 @@ export class ExpeditionUIScene extends Phaser.Scene {
       .text(
         12,
         GAME_HEIGHT - 20,
-        `WASD pohyb · ĽTM ${WEAPONS.puncher.name} · PTM ${WEAPONS.stapler.name} · Medzera úskok · E výťah · M hudba`,
+        `WASD pohyb · ĽTM ${this.expedition().sim.loadout.melee.name} · PTM ${this.expedition().sim.loadout.ranged.name} · Medzera úskok · E výťah`,
         STYLE(11, '#8a5a66'),
       )
       .setDepth(1);
@@ -56,7 +54,7 @@ export class ExpeditionUIScene extends Phaser.Scene {
     this.bars.clear();
     this.bars.fillStyle(0x000000, 0.8).fillRect(16, 32, 200, 10);
     this.bars.fillStyle(p.hp > p.maxHp * 0.3 ? 0xc03030 : 0xff5050, 1).fillRect(16, 32, 200 * (p.hp / p.maxHp), 10);
-    const dashReady = 1 - p.dashCdMs / PLAYER.dash.cooldownMs;
+    const dashReady = 1 - p.dashCdMs / s.loadout.dashCooldownMs;
     this.bars.fillStyle(0x000000, 0.8).fillRect(16, 46, 200, 4);
     this.bars.fillStyle(dashReady >= 1 ? 0x7da8ff : 0x3a4a70, 1).fillRect(16, 46, 200 * dashReady, 4);
 
@@ -64,7 +62,8 @@ export class ExpeditionUIScene extends Phaser.Scene {
     const rewards = formatAmounts(s.rewards);
     this.status.setText(
       `Zdravie ${Math.ceil(p.hp)}/${p.maxHp}   Úskok ${dashReady >= 1 ? 'pripravený' : '…'}\n` +
-        `${left === 0 ? 'Všetko vybavené!' : `Nevybavené reklamácie: ${left}`} · Korisť: ${rewards}`,
+        `${left === 0 ? 'Všetko vybavené!' : `Nevybavené reklamácie: ${left}`} · Korisť: ${rewards}` +
+        (s.loot.length > 0 ? ` · predmety: ${s.loot.length}` : ''),
     );
 
     // Zeigarnik: základňa medzitým pracuje ďalej
