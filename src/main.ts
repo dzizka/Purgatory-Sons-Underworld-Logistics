@@ -1,0 +1,27 @@
+import Phaser from 'phaser';
+import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '@/config/constants';
+import { BootScene } from '@/scenes/BootScene';
+
+const config: Phaser.Types.Core.GameConfig = {
+  type: Phaser.AUTO, // WebGL s fallbackom na Canvas
+  parent: 'game',
+  width: GAME_WIDTH,
+  height: GAME_HEIGHT,
+  backgroundColor: COLORS.background,
+  pixelArt: true, // nearest-neighbour filtrovanie, žiadny antialiasing
+  roundPixels: true,
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  scene: [BootScene],
+};
+
+const game = new Phaser.Game(config);
+
+// HMR: pri hot-reloade zničíme starú inštanciu, inak by sa canvasy kopili.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    game.destroy(true);
+  });
+}
