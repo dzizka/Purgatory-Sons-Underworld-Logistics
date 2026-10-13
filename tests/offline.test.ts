@@ -16,7 +16,7 @@ function chainState(): GameState {
     sinners: [worker('a', 'b1'), worker('b', 'b2')],
     inventory: [],
     equipment: { melee: null, ranged: null, trinket: null },
-    progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0 },
+    progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0, deepestFloor: 0 },
     rngSeed: 1,
     nextId: 10,
   };

@@ -131,7 +131,7 @@ export class BaseScene extends Phaser.Scene {
     const { events } = session.store;
     if (outcome.result === 'won') {
       events.emit('notice', {
-        text: `Expedícia ukončená. Vybavené reklamácie: ${outcome.kills}. Odmena: ${formatAmounts(outcome.rewards)}.`,
+        text: `Expedícia ukončená na poschodí ${outcome.depth}. Vybavené reklamácie: ${outcome.kills}. Odmena: ${formatAmounts(outcome.rewards)}.`,
         tone: 'info',
       });
       if (outcome.loot.length > 0) {

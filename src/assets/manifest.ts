@@ -7,6 +7,7 @@
 
 import { TILE_HEIGHT } from '@/config/constants';
 import type { BuildingType } from '@/data/buildings';
+import type { FloorTheme } from '@/data/dungeon';
 import type { EnemyKind } from '@/data/enemies';
 
 export type PlaceholderSpec =
@@ -83,6 +84,29 @@ export const ASSETS = {
     origin: { x: 0.5, y: 0.5 },
     placeholder: { kind: 'tile', fill: 0x4a1418, stroke: 0x5c1c20 },
   },
+  tile_stairs: {
+    url: 'assets/tiles/stairs.png',
+    origin: { x: 0.5, y: 0.5 },
+    placeholder: { kind: 'tile', fill: 0xd06020, stroke: 0xffa060 },
+  },
+  tile_floor_archive: {
+    url: 'assets/tiles/floor_archive.png',
+    sheet: { frameWidth: 64, frameHeight: 32, frames: 4 },
+    origin: { x: 0.5, y: 0.5 },
+    placeholder: { kind: 'tile', fill: 0x2a2a2e, stroke: 0x3a3a40 },
+  },
+  tile_floor_it: {
+    url: 'assets/tiles/floor_it.png',
+    sheet: { frameWidth: 64, frameHeight: 32, frames: 4 },
+    origin: { x: 0.5, y: 0.5 },
+    placeholder: { kind: 'tile', fill: 0x10282c, stroke: 0x1c3a40 },
+  },
+  tile_floor_board: {
+    url: 'assets/tiles/floor_board.png',
+    sheet: { frameWidth: 64, frameHeight: 32, frames: 3 },
+    origin: { x: 0.5, y: 0.5 },
+    placeholder: { kind: 'tile', fill: 0x3a1010, stroke: 0x5a1818 },
+  },
   tile_elevator: {
     url: 'assets/tiles/elevator.png',
     origin: { x: 0.5, y: 0.5 },
@@ -100,6 +124,24 @@ export const ASSETS = {
     sheet: SOUP_BLOCK_SHEET,
     origin: { x: 0.5, y: BLOCK_ORIGIN_Y(32) },
     placeholder: { kind: 'block', height: 32, footprint: 1, top: 0xa04040, left: 0x702a2a, right: 0x561f1f },
+  },
+  block_wall_archive: {
+    url: 'assets/tiles/wall_archive.png',
+    sheet: SOUP_BLOCK_SHEET,
+    origin: { x: 0.5, y: BLOCK_ORIGIN_Y(32) },
+    placeholder: { kind: 'block', height: 32, footprint: 1, top: 0x9a9aa0, left: 0x6a6a70, right: 0x505056 },
+  },
+  block_wall_it: {
+    url: 'assets/tiles/wall_it.png',
+    sheet: SOUP_BLOCK_SHEET,
+    origin: { x: 0.5, y: BLOCK_ORIGIN_Y(32) },
+    placeholder: { kind: 'block', height: 32, footprint: 1, top: 0x30a0a0, left: 0x207070, right: 0x185858 },
+  },
+  block_wall_board: {
+    url: 'assets/tiles/wall_board.png',
+    sheet: SOUP_BLOCK_SHEET,
+    origin: { x: 0.5, y: BLOCK_ORIGIN_Y(32) },
+    placeholder: { kind: 'block', height: 32, footprint: 1, top: 0xc02020, left: 0x901818, right: 0x701010 },
   },
   block_pillar: {
     url: 'assets/tiles/block_hell.png',
@@ -158,21 +200,55 @@ export interface MapTheme {
   readonly pillar: AssetKey;
   readonly desk: AssetKey;
   readonly elevator: AssetKey;
+  readonly stairs: AssetKey;
   /** Stmavenie podlahy, aby steny a postavy vynikli. */
   readonly floorTint?: number;
 }
 
 export const THEMES = {
-  office: { floor: 'tile_floor', wall: 'block_wall', pillar: 'block_pillar', desk: 'block_desk', elevator: 'tile_elevator' },
+  office: {
+    floor: 'tile_floor',
+    wall: 'block_wall',
+    pillar: 'block_pillar',
+    desk: 'block_desk',
+    elevator: 'tile_elevator',
+    stairs: 'tile_stairs',
+  },
   complaints: {
     floor: 'tile_floor_complaints',
     wall: 'block_wall_red',
     pillar: 'block_pillar',
     desk: 'block_desk',
     elevator: 'tile_elevator',
+    stairs: 'tile_stairs',
     floorTint: 0x6e6e6e,
   },
-} as const satisfies Record<string, MapTheme>;
+  archive: {
+    floor: 'tile_floor_archive',
+    wall: 'block_wall_archive',
+    pillar: 'block_wall',
+    desk: 'block_desk',
+    elevator: 'tile_elevator',
+    stairs: 'tile_stairs',
+  },
+  it: {
+    floor: 'tile_floor_it',
+    wall: 'block_wall_it',
+    pillar: 'block_pillar',
+    desk: 'block_desk',
+    elevator: 'tile_elevator',
+    stairs: 'tile_stairs',
+  },
+  board: {
+    floor: 'tile_floor_board',
+    wall: 'block_wall_board',
+    pillar: 'block_wall_archive',
+    desk: 'block_desk',
+    elevator: 'tile_elevator',
+    stairs: 'tile_stairs',
+    floorTint: 0x9a9a9a,
+  },
+} as const satisfies Record<'office' | FloorTheme, MapTheme>;
 
 export const SINNER_TEXTURES = ['char_sinner_0', 'char_sinner_1', 'char_sinner_2', 'char_sinner_3'] as const satisfies readonly AssetKey[];
 

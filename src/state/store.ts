@@ -38,7 +38,7 @@ export function createInitialState(seed: number): GameState {
       { id: 'i-start-ranged', base: 'stapler', rarity: 'common', affixes: [] },
     ],
     equipment: { melee: 'i-start-melee', ranged: 'i-start-ranged', trinket: null },
-    progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0 },
+    progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0, deepestFloor: 0 },
     rngSeed: seed >>> 0,
     nextId: 1,
   };
@@ -156,11 +156,16 @@ export class GameStore {
   }
 
   /** Zapíše výsledok expedície a ohlási nové odomknuté budovy. */
-  recordExpedition(won: boolean, kills: number): void {
+  recordExpedition(won: boolean, kills: number, depth = 1): void {
     const before = BUILDING_TYPES.filter((t) => this.isUnlocked(t));
     const p = this.state.progress;
-    if (won) p.expeditionsWon += 1;
-    else p.expeditionsLost += 1;
+    if (won) {
+      p.expeditionsWon += 1;
+      if (depth > p.deepestFloor) {
+        p.deepestFloor = depth;
+        if (depth > 1) this.events.emit('notice', { text: `Nový rekord: poschodie ${depth}. Vedenie o vás vie. To nie je dobre.`, tone: 'info' });
+      }
+    } else p.expeditionsLost += 1;
     p.kills += kills;
     for (const t of BUILDING_TYPES) {
       if (before.includes(t) || !this.isUnlocked(t)) continue;

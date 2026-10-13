@@ -4,6 +4,7 @@ import { formatAmounts, RESOURCE_IDS, RESOURCE_INFO } from '@/data/resources';
 import type { ExpeditionOutcome, ExpeditionScene } from '@/scenes/ExpeditionScene';
 import { session } from '@/state/session';
 import { aliveEnemies } from '@/systems/combat/expedition';
+import { floorName } from '@/data/dungeon';
 
 const STYLE = (size: number, color: string): Phaser.Types.GameObjects.Text.TextStyle => ({
   fontFamily: 'monospace',
@@ -24,7 +25,12 @@ export class ExpeditionUIScene extends Phaser.Scene {
 
   create(): void {
     this.add.rectangle(8, 8, 300, 82, 0x140a10, 0.85).setOrigin(0, 0);
-    this.add.text(16, 12, 'ODDELENIE REKLAMÁCIÍ', STYLE(13, '#e8a33d'));
+    const exp0 = this.expedition();
+    const depth = exp0.sim.depth;
+    this.add.text(16, 12, `${floorName(depth).toUpperCase()} · poschodie ${depth}`, STYLE(12, '#e8a33d'));
+    this.add
+      .text(GAME_WIDTH - 12, 44, `seed ${exp0.seed} · rekord: poschodie ${session.store.state.progress.deepestFloor}`, STYLE(10, '#5a3a46'))
+      .setOrigin(1, 0);
     this.bars = this.add.graphics();
     this.status = this.add.text(16, 56, '', STYLE(11, '#e6d3d8')).setLineSpacing(2);
     this.base = this.add.text(GAME_WIDTH - 12, 12, '', STYLE(10, '#8a5a66')).setOrigin(1, 0).setAlign('right');
@@ -70,16 +76,21 @@ export class ExpeditionUIScene extends Phaser.Scene {
     const r = session.store.state.resources;
     this.base.setText(`Základňa (beží ďalej)\n${RESOURCE_IDS.map((id) => `${RESOURCE_INFO[id].name} ${Math.floor(r[id])}`).join('  ')}`);
 
+    const next = s.depth + 1;
     this.hint.setText(
       s.status !== 'active'
         ? ''
         : exp.onElevator
           ? left === 0
-            ? 'E – odísť výťahom s korisťou a bonusom'
-            : 'E – odísť výťahom (korisť si nesiete, bonus za vybavenie nie)'
-          : left === 0
-            ? 'Všetko vybavené. Vráťte sa k výťahu (modrá platforma).'
-            : '',
+            ? 'E – odísť výťahom domov s korisťou a bonusom'
+            : 'E – odísť výťahom domov (korisť si nesiete, bonus za vybavenie nie)'
+          : exp.onStairs
+            ? left === 0
+              ? `E – zostúpiť na poschodie ${next}: ${floorName(next)} (ťažšie, lepšia korisť, smrť = všetko prepadá)`
+              : `Schodisko je zamknuté, kým sú tu nevybavené reklamácie (${left}).`
+            : left === 0
+              ? 'Poschodie vybavené. Výťah (modrý) = domov · schodisko (oranžové) = hlbšie.'
+              : '',
     );
   }
 

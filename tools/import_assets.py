@@ -61,6 +61,19 @@ def half_blocks(sheet: Path, row: int, cols: list[int]) -> Image.Image:
     return strip([im.crop((c * BLOCK, y, (c + 1) * BLOCK, y + BLOCK)) for c in cols])
 
 
+def floor_tile(sheet: Path, row: int, col: int) -> Image.Image:
+    im = magenta_to_alpha(Image.open(sheet))
+    return im.crop((col * TILE_W, row * TILE_H, (col + 1) * TILE_W, (row + 1) * TILE_H))
+
+
+# hlbšie poschodia procedurálneho dungeonu: (názov, podlaha, stena)
+DEPTH_THEMES = [
+    ("archive", "Tomb", "Undead"),
+    ("it", "Black_Cobalt", "Cobalt_Stone"),
+    ("board", "Demonic_Red", "Volcanic_Wall"),
+]
+
+
 def block_at(sheet: Path, row: int, col: int) -> Image.Image:
     im = magenta_to_alpha(Image.open(sheet))
     y = row * 2 * BLOCK
@@ -113,6 +126,10 @@ def main() -> None:
     floor_row(soup / "Floors" / "ISS_Floor_Rough_Red-64x32.png", 0).save(OUT / "tiles" / "floor_complaints.png")
     full_blocks(soup / "Walls" / "Block" / "ISS_Block_Pebble_Red-64x64.png", 0).save(OUT / "tiles" / "wall_pebble_red.png")
     floor_row(soup / "Floors" / "ISS_Floor_Tutorial_Pad-64x32.png", 0).save(OUT / "tiles" / "elevator.png")
+    floor_tile(soup / "Floors" / "ISS_Floor_Stairs-64x32.png", 1, 1).save(OUT / "tiles" / "stairs.png")
+    for name, floor, wall in DEPTH_THEMES:
+        floor_row(soup / "Floors" / f"ISS_Floor_{floor}-64x32.png", 0).save(OUT / "tiles" / f"floor_{name}.png")
+        full_blocks(soup / "Walls" / "Block" / f"ISS_Block_{wall}-64x64.png", 0).save(OUT / "tiles" / f"wall_{name}.png")
     for name, sheet in ENEMY_SHEETS.items():
         shutil.copy(puny / f"{sheet}.png", OUT / "sprites" / f"enemy_{name}.png")
 

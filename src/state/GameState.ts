@@ -48,4 +48,6 @@ export interface ProgressState {
   expeditionsWon: number;
   expeditionsLost: number;
   kills: number;
+  /** Najhlbšie poschodie, z ktorého sa manažér vrátil živý (0 = ešte nikdy). */
+  deepestFloor: number;
 }

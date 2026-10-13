@@ -1,11 +1,12 @@
 /**
  * Ručne kreslené mapy. Riadok = world y, stĺpec = world x.
- * `.` podlaha · `#` stena · `P` stĺp · `D` stôl · `@` spawn · `X` výťah
+ * `.` podlaha · `#` stena · `P` stĺp · `D` stôl · `@` spawn · `X` výťah · `v` schodisko · `L` korisť
  * `a` audítor · `c` compliance officer · medzera = prázdno
+ * Expedičné poschodia generuje `systems/dungeon/generate.ts` v rovnakom formáte.
  */
 export const PROCESSING_OFFICE: readonly string[] = [
   '########################',
-  '#......................#',
+  '#...........X..........#',
   '#..P.....P......P....P.#',
   '#......................#',
   '#..DDD..DDD....DDD..DD.#',
@@ -13,7 +14,7 @@ export const PROCESSING_OFFICE: readonly string[] = [
   '#..DDD..DDD....DDD..DD.#',
   '#..........@...........#',
   '#..P.....P......P....P.#',
-  '#.....................X#',
+  '#......................#',
   '#####.......############',
   '    #.......#           ',
   '    #...P...#           ',
@@ -21,27 +22,8 @@ export const PROCESSING_OFFICE: readonly string[] = [
   '    #########           ',
 ];
 
-/** Oddelenie reklamácií: vstupná miestnosť s výťahom, hala s pultmi, archív. */
-export const COMPLAINTS_DEPT: readonly string[] = [
-  '##############################',
-  '#X.....#.....................#',
-  '#.@....#...DDDD.......a......#',
-  '#..............a.............#',
-  '#..P...#...........P.....a...#',
-  '#......#...DDDD..a...........#',
-  '#......#.................a...#',
-  '########.........c...........#',
-  '####################..########',
-  '#....a.....D...D.......c.....#',
-  '#..P.......D...D.......a..P..#',
-  '#..........D...D.............#',
-  '#....c..............a........#',
-  '#......a.........DDDD...a....#',
-  '##############################',
-];
-
-/** Kde sa manažér objaví po návrate z expedície (pri výťahu). */
-export const BASE_ELEVATOR_ARRIVAL = { x: 21, y: 9 } as const;
+/** Kde sa manažér objaví po návrate z expedície (pred výťahom pri zadnej stene). */
+export const BASE_ELEVATOR_ARRIVAL = { x: 12, y: 2 } as const;
 
 /** Čakáreň (dolná miestnosť): kde postávajú nepridelení hriešnici. Stavať sa tu nedá. */
 export const LOUNGE_AREA = { minX: 5, maxX: 11, minY: 11, maxY: 13 } as const;

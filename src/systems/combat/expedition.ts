@@ -1,6 +1,7 @@
 import { CLEAR_BONUS, ENEMIES, type EnemyKind } from '@/data/enemies';
 import { PLAYER } from '@/data/player';
-import { emptyResources, gain, type Resources } from '@/data/resources';
+import { depthScaling, type DepthScaling } from '@/data/dungeon';
+import { emptyResources, gain, type ResourceAmounts, type Resources } from '@/data/resources';
 import { Rng } from '@/core/rng';
 import type { Item } from '@/data/items';
 import { generateItem, type Loadout, resolveLoadout } from '@/systems/loot/loot';
@@ -57,6 +58,8 @@ const PICKUP_RADIUS = 0.55;
 
 export interface ExpeditionState {
   readonly loadout: Loadout;
+  readonly depth: number;
+  readonly scaling: DepthScaling;
   player: PlayerCombat;
   enemies: EnemyState[];
   projectiles: Projectile[];
@@ -99,11 +102,44 @@ export type ExpeditionEvent =
   | { readonly type: 'lootDropped'; readonly dropId: number }
   | { readonly type: 'lootPicked'; readonly dropId: number; readonly item: Item };
 
+/** Čo si manažér nesie z vyššieho poschodia. */
+export interface ExpeditionCarry {
+  readonly hp: number;
+  readonly rewards: Resources;
+  readonly loot: readonly Item[];
+  readonly kills: number;
+}
+
 export interface ExpeditionOptions {
   /** Výbava manažéra; predvolene základná dierovačka a sponkovačka. */
   readonly loadout?: Loadout;
   /** Seed pre korisť – rovnaký seed, rovnaké dropy. */
   readonly seed?: number;
+  /** Poschodie (1 = prvé). Hlbšie = silnejší nepriatelia, lepšia korisť. */
+  readonly depth?: number;
+  readonly carry?: ExpeditionCarry;
+  /** Korisť ležiaca na mape od začiatku (sklad). */
+  readonly lootSpots?: readonly { readonly tx: number; readonly ty: number }[];
+}
+
+/** Násobok surovín podľa hĺbky, zaokrúhlený (aspoň pôvodná hodnota). */
+function scaleAmounts(a: ResourceAmounts, mult: number): ResourceAmounts {
+  const out: ResourceAmounts = {};
+  for (const id of Object.keys(a) as (keyof ResourceAmounts)[]) {
+    const v = a[id] ?? 0;
+    out[id] = Math.max(v, Math.round(v * mult));
+  }
+  return out;
+}
+
+/** Schodisko dole sa otvorí, až keď je poschodie vybavené. */
+export function canDescend(s: ExpeditionState): boolean {
+  return s.status === 'active' && s.cleared;
+}
+
+/** Stav, ktorý sa prenesie na ďalšie poschodie. */
+export function carryOf(s: ExpeditionState): ExpeditionCarry {
+  return { hp: s.player.hp, rewards: { ...s.rewards }, loot: [...s.loot], kills: s.kills };
 }
 
 export function createExpedition(
@@ -113,14 +149,19 @@ export function createExpedition(
 ): ExpeditionState {
   let nextId = 1;
   const loadout = opts.loadout ?? resolveLoadout({});
-  return {
+  const depth = Math.max(1, Math.floor(opts.depth ?? 1));
+  const scaling = depthScaling(depth);
+  const carry = opts.carry;
+  const s: ExpeditionState = {
     loadout,
+    depth,
+    scaling,
     rng: new Rng(opts.seed ?? 1),
     drops: [],
-    loot: [],
+    loot: carry ? [...carry.loot] : [],
     player: {
       pos: { x: spawn.x, y: spawn.y },
-      hp: loadout.maxHp,
+      hp: carry ? Math.min(loadout.maxHp, Math.max(1, carry.hp)) : loadout.maxHp,
       maxHp: loadout.maxHp,
       radius: PLAYER.radius,
       invulnMs: 0,
@@ -134,12 +175,13 @@ export function createExpedition(
     },
     enemies: enemies.map((e) => {
       const def = ENEMIES[e.kind];
+      const hp = Math.round(def.maxHp * scaling.enemyHp);
       return {
         id: nextId++,
         kind: e.kind,
         pos: { x: e.tx, y: e.ty },
-        hp: def.maxHp,
-        maxHp: def.maxHp,
+        hp,
+        maxHp: hp,
         radius: def.radius,
         invulnMs: 0,
         knock: { x: 0, y: 0 },
@@ -150,12 +192,18 @@ export function createExpedition(
     }),
     projectiles: [],
     nextId,
-    kills: 0,
-    rewards: emptyResources(),
+    kills: carry?.kills ?? 0,
+    rewards: carry ? { ...carry.rewards } : emptyResources(),
     cleared: enemies.length === 0,
     status: 'active',
     timeMs: 0,
   };
+  // sklad: korisť leží na zemi od začiatku (so šťastím navyše)
+  for (const spot of opts.lootSpots ?? []) {
+    const id = s.nextId++;
+    s.drops.push({ id, item: generateItem(s.rng, `loot-${id}`, { luck: scaling.luck + 0.5 }), pos: { x: spot.tx, y: spot.ty } });
+  }
+  return s;
 }
 
 export function aliveEnemies(s: ExpeditionState): EnemyState[] {
@@ -265,10 +313,10 @@ export function stepExpedition(s: ExpeditionState, input: ExpeditionInput, dtMs:
     ev.push({ type: 'playerDied' });
   } else if (!s.cleared && aliveEnemies(s).length === 0) {
     s.cleared = true;
-    gain(s.rewards, CLEAR_BONUS);
+    gain(s.rewards, scaleAmounts(CLEAR_BONUS, s.scaling.reward));
     ev.push({ type: 'cleared' });
     // garantovaná odmena za vybavenie všetkého – pri nohách manažéra
-    dropLoot(s, { x: p.pos.x + 0.6, y: p.pos.y + 0.6 }, CLEAR_LUCK, ev);
+    dropLoot(s, { x: p.pos.x + 0.6, y: p.pos.y + 0.6 }, CLEAR_LUCK + s.scaling.luck, ev);
   }
   return ev;
 }
@@ -281,9 +329,9 @@ function hitEnemy(s: ExpeditionState, e: EnemyState, amount: number, from: Vec2,
     e.phase = 'dead';
     e.phaseMs = CORPSE_MS;
     s.kills += 1;
-    gain(s.rewards, def.reward);
+    gain(s.rewards, scaleAmounts(def.reward, s.scaling.reward));
     ev.push({ type: 'enemyKilled', enemyId: e.id, kind: e.kind });
-    if (s.rng.chance(def.lootChance)) dropLoot(s, { x: e.pos.x, y: e.pos.y }, 0, ev);
+    if (s.rng.chance(def.lootChance)) dropLoot(s, { x: e.pos.x, y: e.pos.y }, s.scaling.luck, ev);
     return;
   }
   // zásah prebudí aj spiaceho audítora
@@ -337,9 +385,10 @@ function stepEnemy(s: ExpeditionState, e: EnemyState, dtMs: number, grid: Collis
       {
         const inReach = d <= strikeRange + STRIKE_SLACK;
         const ahead = (p.pos.x - e.pos.x) * e.aim.x + (p.pos.y - e.pos.y) * e.aim.y > 0;
-        const hit = inReach && ahead && applyHit(p, def.damage, e.pos, 3, PLAYER.hitInvulnMs);
+        const damage = Math.round(def.damage * s.scaling.enemyDamage);
+        const hit = inReach && ahead && applyHit(p, damage, e.pos, 3, PLAYER.hitInvulnMs);
         ev.push({ type: 'enemyStrike', enemyId: e.id, hit });
-        if (hit) ev.push({ type: 'playerHit', amount: def.damage });
+        if (hit) ev.push({ type: 'playerHit', amount: damage });
         e.phase = 'recover';
         e.phaseMs = def.recoverMs;
       }

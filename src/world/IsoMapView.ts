@@ -23,8 +23,9 @@ export class IsoMapView {
         const kind = grid.get(tx, ty);
         if (kind === 'void') continue;
         const s = worldToScreen({ x: tx, y: ty });
-        if (kind === 'elevator') {
-          const pad = scene.add.image(s.x, s.y, theme.elevator).setDepth(FLOOR_DEPTH);
+        if (kind === 'elevator' || kind === 'stairs') {
+          // výťah a schodisko jemne pulzujú, aby sa nedali prehliadnuť
+          const pad = scene.add.image(s.x, s.y, kind === 'elevator' ? theme.elevator : theme.stairs).setDepth(FLOOR_DEPTH);
           scene.tweens.add({ targets: pad, alpha: 0.55, duration: 900, yoyo: true, repeat: -1 });
         } else {
           const tile = scene.add.image(s.x, s.y, theme.floor, tileVariant(tx, ty, floorVariants)).setDepth(FLOOR_DEPTH);
