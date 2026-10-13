@@ -5,7 +5,9 @@ Použitie (z koreňa repa, potrebuje Python 3 + Pillow a `unar` na .rar):
 
     unar -o /tmp/soup "assets-src/stone-soup/SBS - Isometric Stone Soup.rar"
     unzip -o assets-src/puny-characters/puny-charactersorcs_included.zip -d /tmp/puny
-    python3 tools/import_assets.py --soup /tmp/soup --puny /tmp/puny
+    unzip -o assets-src/kenney_furniturePack.zip -d /tmp/kenney
+    unzip -o "assets-src/sbs_-_isometric_floor_tiles_-_small_128x64.zip" -d /tmp/sbsfloor
+    python3 tools/import_assets.py --soup /tmp/soup --puny /tmp/puny --kenney /tmp/kenney --sbs-floors /tmp/sbsfloor
 
 Skript je deterministický – výstup sa dá kedykoľvek pregenerovať.
 """
@@ -22,6 +24,7 @@ from PIL import Image
 OUT = Path(__file__).resolve().parent.parent / "public" / "assets"
 MUSIC_SRC = Path(__file__).resolve().parent.parent / "assets-src" / "music"
 BUSINESSMAN_SRC = Path(__file__).resolve().parent.parent / "assets-src" / "businessman"
+ASSETS_SRC = Path(__file__).resolve().parent.parent / "assets-src"
 
 TILE_W, TILE_H = 64, 32
 BLOCK = 64  # bunka bloku v Stone Soup sheetoch (64×64)
@@ -59,12 +62,6 @@ def full_blocks(sheet: Path, row: int) -> Image.Image:
     return strip([im.crop((c * BLOCK, y, (c + 1) * BLOCK, y + BLOCK)) for c in range(0, im.width // BLOCK, 2)])
 
 
-def half_blocks(sheet: Path, row: int, cols: list[int]) -> Image.Image:
-    im = magenta_to_alpha(Image.open(sheet))
-    y = row * 2 * BLOCK
-    return strip([im.crop((c * BLOCK, y, (c + 1) * BLOCK, y + BLOCK)) for c in cols])
-
-
 def floor_tile(sheet: Path, row: int, col: int) -> Image.Image:
     im = magenta_to_alpha(Image.open(sheet))
     return im.crop((col * TILE_W, row * TILE_H, (col + 1) * TILE_W, (row + 1) * TILE_H))
@@ -78,20 +75,7 @@ DEPTH_THEMES = [
 ]
 
 
-def block_at(sheet: Path, row: int, col: int) -> Image.Image:
-    im = magenta_to_alpha(Image.open(sheet))
-    y = row * 2 * BLOCK
-    return im.crop((col * BLOCK, y, (col + 1) * BLOCK, y + BLOCK))
-
-
 # budova → (sheet, stĺpec plného bloku v riadku 0)
-BUILDING_BLOCKS = {
-    "intake": ("Stone_Black_Marked", 0),
-    "coffee": ("Brick_Brown", 0),
-    "copier": ("Lab_Metal", 4),
-    "torture": ("Bars_Red", 0),
-    "training": ("Church", 0),
-}
 
 # nepriatelia na expedíciách
 # slime: jeden riadok 15 snímok bez smerov (pozri src/entities/slimeAnims.ts)
@@ -145,10 +129,73 @@ def ceo_sheet() -> Image.Image:
     return out
 
 
+# ---------------------------------------------------------------- nábytok (Kenney Furniture Kit, CC0)
+# Kenney rendery sú vyhladené 3D – zmenšíme ich (podlaha Kenney ≈ 151 px → ~75 px), mierne stmavíme
+# do pekelnej palety a poskladáme na plátno 64×96: stred podstavy dlaždice na (32, 80), predný roh na y = 96.
+FURN_SCALE = 0.5
+FURN_W, FURN_H = 64, 96
+FURN_DARKEN = 0.82
+
+# budovy na základni: zoznam (predmet, smer, posun x, posun y) – kreslí sa v poradí (zadné prvé)
+BUILDING_FURNITURE = {
+    "intake": [("desk", "SE", 0, 0), ("computerScreen", "SE", -3, -20), ("chairDesk", "SE", 8, 6)],
+    "coffee": [("kitchenCabinet", "SE", 0, 0), ("kitchenCoffeeMachine", "SE", 0, -27)],
+    "copier": [("sideTableDrawers", "SE", 0, 0), ("kitchenMicrowave", "SE", 0, -24)],
+    "torture": [("washerDryerStacked", "SE", 0, 0)],
+    "training": [("tableCoffee", "SE", 0, 2), ("televisionVintage", "SE", 0, -12)],
+}
+# varianty pre „stôl“ (D) – v kancelárii aj v archívoch dungeonu (tileVariant vyberá podľa súradníc)
+DESK_FURNITURE = [
+    [("desk", "SE", 0, 0), ("computerScreen", "SE", -3, -20)],
+    [("bookcaseClosed", "SE", 0, 0)],
+    [("bookcaseOpen", "SE", 0, 0)],
+    [("sideTableDrawers", "SE", 0, 0), ("cardboardBoxClosed", "SE", 2, -22)],
+    [("cardboardBoxClosed", "SE", -6, 0), ("cardboardBoxOpen", "SE", 7, 4)],
+    [("desk", "SW", 0, 0), ("laptop", "SW", 2, -18)],
+]
+
+
+def diamond_tile(im: Image.Image) -> Image.Image:
+    """SBS dlaždice 128×64 sú RGB s čiernym pozadím → zmenšiť na 64×32 a orezať na kosoštvorec."""
+    tile = im.convert("RGBA").resize((TILE_W, TILE_H), Image.LANCZOS)
+    px = tile.load()
+    for y in range(TILE_H):
+        for x in range(TILE_W):
+            inside = abs(x + 0.5 - TILE_W / 2) / (TILE_W / 2) + abs(y + 0.5 - TILE_H / 2) / (TILE_H / 2) <= 1.0
+            if not inside:
+                px[x, y] = (0, 0, 0, 0)
+    return tile
+
+
+def kenney(kit: Path, name: str, direction: str) -> Image.Image:
+    im = Image.open(kit / f"{name}_{direction}.png").convert("RGBA")
+    w, h = max(1, round(im.width * FURN_SCALE)), max(1, round(im.height * FURN_SCALE))
+    im = im.resize((w, h), Image.LANCZOS)
+    px = im.load()
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            # tvrdé okraje ako v pixel arte + stmavenie
+            a = 255 if a >= 128 else 0
+            px[x, y] = (int(r * FURN_DARKEN), int(g * FURN_DARKEN), int(b * FURN_DARKEN), a)
+    return im
+
+
+def furniture(kit: Path, parts: list[tuple[str, str, int, int]]) -> Image.Image:
+    out = Image.new("RGBA", (FURN_W, FURN_H), (0, 0, 0, 0))
+    for name, direction, dx, dy in parts:
+        im = kenney(kit, name, direction)
+        # spodok predmetu kúsok nad predným rohom dlaždice
+        out.alpha_composite(im, (FURN_W // 2 - im.width // 2 + dx, 92 - im.height + dy))
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--soup", type=Path, required=True, help="rozbalený Isometric Stone Soup")
     ap.add_argument("--puny", type=Path, required=True, help="rozbalené Puny Characters (verzia s orkami)")
+    ap.add_argument("--kenney", type=Path, required=True, help="rozbalený Kenney Furniture Kit (kenney_furniturePack.zip)")
+    ap.add_argument("--sbs-floors", type=Path, required=True, help="rozbalené SBS Isometric Floor Tiles – Small 128x64")
     args = ap.parse_args()
 
     soup = next(args.soup.rglob("Tile-Sets"))
@@ -157,15 +204,21 @@ def main() -> None:
     (OUT / "sprites").mkdir(parents=True, exist_ok=True)
     (OUT / "audio").mkdir(parents=True, exist_ok=True)
 
-    floor_row(soup / "Floors" / "ISS_Floor_Rect_Gray-64x32.png", 0).save(OUT / "tiles" / "floor_office.png")
     full_blocks(soup / "Walls" / "Block" / "ISS_Block_Brick_Dark-64x64.png", 0).save(OUT / "tiles" / "wall_brick_dark.png")
     full_blocks(soup / "Walls" / "Block" / "ISS_Block_Hell-64x64.png", 0).save(OUT / "tiles" / "block_hell.png")
-    # polovičné kovové bloky = „kancelárske stoly“ (nepárne stĺpce = polovičné bloky)
-    half_blocks(soup / "Walls" / "Block" / "ISS_Block_Lab_Metal-64x64.png", 0, [1, 3]).save(OUT / "tiles" / "desk_metal.png")
 
     (OUT / "buildings").mkdir(parents=True, exist_ok=True)
-    for name, (sheet, col) in BUILDING_BLOCKS.items():
-        block_at(soup / "Walls" / "Block" / f"ISS_Block_{sheet}-64x64.png", 0, col).save(OUT / "buildings" / f"{name}.png")
+    kit = next(args.kenney.rglob("Isometric"))
+    for name, parts in BUILDING_FURNITURE.items():
+        furniture(kit, parts).save(OUT / "buildings" / f"{name}.png")
+    strip([furniture(kit, parts) for parts in DESK_FURNITURE]).save(OUT / "tiles" / "desk_office.png")
+
+    # podlaha kancelárie: drevené parkety SBS (128×64 → 64×32)
+    interior = next(args.sbs_floors.rglob("Interior"))
+    wood = Image.open(interior / "1 Floor - Wood 128x64.png").convert("RGBA")
+    strip([diamond_tile(wood.crop((c * 128, 0, (c + 1) * 128, 64))) for c in range(3)]).save(
+        OUT / "tiles" / "floor_office.png"
+    )
 
     shutil.copy(puny / "Human-Worker-Red.png", OUT / "sprites" / "manager.png")
     for i, sheet in enumerate(SINNER_SHEETS):

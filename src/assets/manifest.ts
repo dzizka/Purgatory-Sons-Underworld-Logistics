@@ -64,17 +64,21 @@ const punySheet = (url: string, fill: number) =>
     placeholder: { kind: 'capsule', width: 14, height: 18, fill, outline: 0x2a1408 },
   }) as const;
 
+/** Nábytok z Kenney Furniture Kit: plátno 64×96, stred podstavy dlaždice na y = 80 (pozri tools/import_assets.py). */
+const FURNITURE_ORIGIN = { x: 0.5, y: 80 / 96 } as const;
+
 const buildingBlock = (url: string, top: number, left: number, right: number) =>
   ({
     url,
-    origin: { x: 0.5, y: BLOCK_ORIGIN_Y(32) },
+    origin: FURNITURE_ORIGIN,
     placeholder: { kind: 'block', height: 32, footprint: 1, top, left, right },
   }) as const;
 
 export const ASSETS = {
   tile_floor: {
+    /** SBS drevené parkety (3 varianty). */
     url: 'assets/tiles/floor_office.png',
-    sheet: { frameWidth: 64, frameHeight: 32, frames: 4 },
+    sheet: { frameWidth: 64, frameHeight: 32, frames: 3 },
     origin: { x: 0.5, y: 0.5 },
     placeholder: { kind: 'tile', fill: 0x3a1f2b, stroke: 0x4d2837 },
   },
@@ -149,11 +153,11 @@ export const ASSETS = {
     origin: { x: 0.5, y: BLOCK_ORIGIN_Y(32) },
     placeholder: { kind: 'block', height: 32, footprint: 1, top: 0xb3202a, left: 0x7a1219, right: 0x5c0d12 },
   },
-  // Kancelársky nábytok v CC0 izometrickom pixel arte neexistuje → polovičné kovové bloky (výška 16 px).
+  /** Kancelársky nábytok (Kenney): stôl s monitorom, regály, kartotéka, krabice, stôl s laptopom – 6 variantov. */
   block_desk: {
-    url: 'assets/tiles/desk_metal.png',
-    sheet: { frameWidth: 64, frameHeight: 64, frames: 2 },
-    origin: { x: 0.5, y: 0.75 },
+    url: 'assets/tiles/desk_office.png',
+    sheet: { frameWidth: 64, frameHeight: 96, frames: 6 },
+    origin: FURNITURE_ORIGIN,
     placeholder: { kind: 'block', height: 16, footprint: 0.85, top: 0x7a5236, left: 0x5a3b26, right: 0x46301f },
   },
   /** Puny Characters: 24 stĺpcov (animácie) × 8 riadkov (smery), snímka 32×32. */
@@ -242,6 +246,8 @@ export const THEMES = {
     desk: 'block_desk',
     elevator: 'tile_elevator',
     stairs: 'tile_stairs',
+    // parkety stmavené, aby postavy a nábytok vynikli (a aby to nevyzeralo ako IKEA)
+    floorTint: 0x9a8580,
   },
   complaints: {
     floor: 'tile_floor_complaints',

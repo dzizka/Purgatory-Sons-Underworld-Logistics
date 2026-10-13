@@ -196,7 +196,12 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - [x] Séria pokračuje len po splnenom predošlom dni (test)
 - [x] Staré aj poškodené savy sa načítajú (testy v4 → v5)
 
+## Fáza 13 – Kancelársky nábytok ✅
+- Kenney Furniture Kit (CC0): budovy ako skutočný nábytok – Podateľňa (stôl, monitor, stolička), Kávovar, Kopírka (kartotéka s „tlačiarňou“), Mučiareň (práčka so sušičkou = centrifúga), Školiaca miestnosť (televízor na stolíku)
+- Stoly v kancelárii a v archívoch dungeonu: 6 variantov (stôl s monitorom/laptopom, regály, kartotéka, krabice)
+- Podlaha kancelárie: SBS drevené parkety (CC0), stmavené
+- Import automatizovaný v `tools/import_assets.py` (zmenšenie, tvrdé okraje, stmavenie, orezanie dlaždíc)
+
 ---
 
 ## Backlog (po MVP)
-- Kancelársky nábytok v pixel arte (dnes polovičné kovové bloky)
