@@ -6,10 +6,10 @@ export const TILE_HEIGHT = 32;
 export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
 
+/** Hĺbka podlahy – vždy pod všetkými Y-sortovanými objektmi. */
+export const FLOOR_DEPTH = -1_000_000;
+
 export const COLORS = {
   background: 0x120a0f,
-  tileFill: 0x3a1f2b,
-  tileFillAlt: 0x2e1822,
-  tileStroke: 0x6b2f3f,
   accent: 0xe8a33d,
 } as const;
