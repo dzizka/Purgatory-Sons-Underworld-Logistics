@@ -4,6 +4,7 @@ import type { SinnerKind } from '@/data/sinnerKinds';
 import type { Item, ItemSlot } from '@/data/items';
 import type { Resources } from '@/data/resources';
 import type { TraitId } from '@/data/traits';
+import type { QuotaBoard } from '@/systems/quotas/quotas';
 
 /** Celý stav hry – čisté dáta, serializovateľné do JSON (save vo Fáze 6). */
 export interface GameState {
@@ -20,6 +21,8 @@ export interface GameState {
   progress: ProgressState;
   /** Mená hriešnikov v dôchodku (dôchodkový fond = trvalý bonus výroby). */
   retirees: string[];
+  /** Denné kvóty od vedenia (`null`, kým sa prvýkrát nevygenerujú). */
+  quotas: QuotaBoard | null;
   rngSeed: number;
   nextId: number;
 }

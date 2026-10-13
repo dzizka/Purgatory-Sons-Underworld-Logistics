@@ -45,6 +45,7 @@ export const TUTORIAL: readonly TutorialSlide[] = [
       'Z reklamácií padá korisť. Farba = rarita: bežné, byrokratické, legendárne, prekliate.',
       'I = sklad a výbava. Porovnanie ▲▼ ukáže, či sa oplatí.',
       'Základňa medzitým pracuje ďalej. Aj keď hru zavriete (najviac 8 h).',
+      'Denné kvóty od vedenia (vľavo): splňte, Q = odmena. Všetky tri = Zamestnanec dňa a predmet.',
     ],
   },
   {

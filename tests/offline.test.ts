@@ -33,6 +33,7 @@ function chainState(withCoffee = true): GameState {
     equipment: { melee: null, ranged: null, trinket: null },
     progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0, deepestFloor: 0, bossesDefeated: 0 },
     retirees: [],
+    quotas: null,
     rngSeed: 1,
     nextId: 10,
   };

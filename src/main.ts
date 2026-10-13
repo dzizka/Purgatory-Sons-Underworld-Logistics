@@ -34,7 +34,10 @@ game.events.on(Phaser.Core.Events.STEP, (_time: number, delta: number) => {
 
 // --- ukladanie: priebežne, pri skrytí karty a pri zatváraní ---
 const AUTOSAVE_MS = 15_000;
-const autosave = window.setInterval(() => session.save(), AUTOSAVE_MS);
+const autosave = window.setInterval(() => {
+  session.refreshQuotas();
+  session.save();
+}, AUTOSAVE_MS);
 let hiddenAt: number | null = null;
 const onVisibility = (): void => {
   if (document.visibilityState === 'hidden') {

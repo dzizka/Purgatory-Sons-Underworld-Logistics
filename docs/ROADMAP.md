@@ -181,6 +181,21 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - [x] Právnik ustupuje, strieľa na dostrel; úskok aj stena projektil neprepustia k zraneniu (testy)
 - [x] Nové typy sa objavujú až od svojho poschodia (test generátora)
 
+## Fáza 12 – Denné kvóty od vedenia ✅
+**Cieľ:** dôvod vrátiť sa zajtra (Zeigarnik + premenlivé odmeny).
+
+- Tri kvóty denne (miestny dátum), deterministicky podľa dňa a savu, z rôznych skupín: výroba, zabitia, typ nepriateľa, živý návrat z poschodia, nábor, skartovanie, CEO
+- Ponúka sa len to, čo hráč vie splniť; ciele aj odmeny rastú s najhlbším poschodím; z expedície sa ráta iba živý návrat
+- [Q] vyzdvihne odmeny; všetky tri = **Zamestnanec dňa** (bonus + predmet so šťastím); séria dní +10 %/deň (max +50 %), vynechaný deň ju vynuluje
+- Panel v HUD základne, hlášky pri splnení a novom dni; cheaty „splniť všetky“ a „ďalší deň“
+- Save verzia 5 s migráciou; poškodená tabuľa kvót sa zahodí a vygeneruje znova (save nepadá)
+
+**Definition of Done**
+- [x] Kvóty sú deterministické, rôzne a dosiahnuteľné pre aktuálny postup (testy)
+- [x] Smrť sa nepočíta, odmena sa vyzdvihne len raz, bonus za všetky tri (testy)
+- [x] Séria pokračuje len po splnenom predošlom dni (test)
+- [x] Staré aj poškodené savy sa načítajú (testy v4 → v5)
+
 ---
 
 ## Backlog (po MVP)

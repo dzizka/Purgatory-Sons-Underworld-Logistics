@@ -26,6 +26,7 @@ npm run preview    # lokálny náhľad produkčného buildu
 | P / R | hriešnik na úrovni 10: povýšiť na vedúceho / poslať do dôchodku |
 | H | nábor nového hriešnika vybraného typu (úradník za 3 duše) |
 | T | prepnúť typ náboru (odomknuté typy) |
+| Q | vyzdvihnúť odmeny za splnené denné kvóty |
 | klik na budovu | detail: stav, recept, efektivita pracovníkov |
 | Esc / pravé tlačidlo | zrušiť režim |
 | M | zvuk on/off |
@@ -45,6 +46,8 @@ Nepriatelia pred úderom zastanú a pod nimi sa rozsvieti červený výsek – v
 Vlastnosti hriešnikov (Workoholik, Prokrastinátor, Mikromanažér, Introvert…) menia výkon; skúsenosti zvyšujú úroveň (+10 % / level, najviac úroveň 10).
 
 **Typy hriešnikov:** okrem úradníka sa postupom odomykajú **Stážista** (po 5 zabitiach – lacný, pomalší, učí sa 2×), **Barista** (po 3 výpravách – kávovar +80 %, pomalšie sa unavuje), **Účtovník** (po návrate z 3. poschodia – podateľňa a kopírka +50 %) a **Firemný právnik** (po porážke CEO – mučiareň +60 %, kolegovia +10 %). Vlastnosti sa k typom pridávajú náhodne.
+
+**Denné kvóty od vedenia:** každý deň (o polnoci miestneho času) tri nové ciele – vyrobiť suroviny, vybaviť reklamácie či konkrétny typ nepriateľa, vrátiť sa z rekordného poschodia, nabrať hriešnikov, skartovať predmety, poraziť CEO. Ponúka sa len to, čo už hráč vie splniť, a ciele aj odmeny rastú s hĺbkou. Z expedície sa ráta iba živý návrat. Všetky tri = **Zamestnanec dňa** (bonus a predmet); séria dní po sebe zvyšuje všetky odmeny o 10 % za deň (najviac +50 %).
 
 **Kariéra:** na úrovni 10 sa dá hriešnik **povýšiť na vedúceho** (sám nepracuje, budova +25 %) alebo poslať do **dôchodku** (zmizne, celá výroba trvalo +5 %, najviac +50 %) – alebo nech robí ďalej. Pracovníci sa unavujú a sami si berú kávu zo skladu; bez kávy **vyhoria** a robia na polovicu.
 

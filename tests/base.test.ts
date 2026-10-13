@@ -23,6 +23,7 @@ function freshStore(sinners: SinnerState[] = []): GameStore {
     // všetko odomknuté – tieto testy overujú produkciu, nie progresiu
     progress: { expeditionsWon: 99, expeditionsLost: 0, kills: 999, deepestFloor: 0, bossesDefeated: 0 },
     retirees: [],
+    quotas: null,
     rngSeed: 1,
     nextId: 100,
   };
