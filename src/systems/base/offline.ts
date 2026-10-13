@@ -1,6 +1,6 @@
 import { RESOURCE_IDS, type ResourceAmounts } from '@/data/resources';
 import type { GameState } from '@/state/GameState';
-import { tickProduction } from '@/systems/base/production';
+import { tickBase } from '@/systems/base/production';
 
 /** Najviac koľko času sa dopočíta (aby týždeň mimo hry nerozbil ekonomiku). */
 export const OFFLINE_CAP_MS = 8 * 60 * 60 * 1000;
@@ -24,7 +24,7 @@ export function applyOffline(state: GameState, elapsedMs: number): OfflineReport
   const simulatedMs = Math.min(safe, OFFLINE_CAP_MS);
   const before = { ...state.resources };
   let cycles = 0;
-  for (let t = 0; t < simulatedMs; t += STEP_MS) cycles += tickProduction(state, Math.min(STEP_MS, simulatedMs - t)).length;
+  for (let t = 0; t < simulatedMs; t += STEP_MS) cycles += tickBase(state, Math.min(STEP_MS, simulatedMs - t)).cycles.length;
   const produced: ResourceAmounts = {};
   for (const id of RESOURCE_IDS) {
     const d = Math.floor(state.resources[id]) - Math.floor(before[id]);

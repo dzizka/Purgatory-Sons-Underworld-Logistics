@@ -9,8 +9,9 @@ import { BASE_EVENTS, type BaseScene, type TileInfo } from '@/scenes/BaseScene';
 import type { SinnerState } from '@/state/GameState';
 import { session } from '@/state/session';
 import { HIRE_COST } from '@/state/store';
-import { buildingRate, workersOf } from '@/systems/base/production';
-import { levelFromXp, sinnerEfficiency } from '@/systems/staff/sinners';
+import { COFFEE_BREAK_AT, LEAD_BONUS, MAX_LEVEL, PENSION_BONUS } from '@/data/careers';
+import { buildingRate, leadOf, workersOf } from '@/systems/base/production';
+import { burnoutMult, isMaxLevel, levelFromXp, sinnerEfficiency, xpForLevel } from '@/systems/staff/sinners';
 import type { TileKind } from '@/world/TileGrid';
 
 const TILE_LABEL: Readonly<Record<TileKind, string>> = {
@@ -41,8 +42,7 @@ const BAR_Y = GAME_HEIGHT - 32;
 const ROW_H = 30;
 const MAX_ROWS = 10;
 
-/** XP potrebné na ďalšiu úroveň. */
-const xpForLevel = (level: number): number => 20 * (level - 1) ** 2;
+const pct = (x: number): number => Math.round(x * 100);
 
 /**
  * HUD overlay. Beží ako samostatná scéna s vlastnou kamerou, takže zoom
@@ -88,6 +88,8 @@ export class UIScene extends Phaser.Scene {
     this.subscribe();
     this.renderAll();
     this.time.addEvent({ delay: 200, loop: true, callback: () => this.renderInfo() });
+    // únava sa mení priebežne, nie na event
+    this.time.addEvent({ delay: 1000, loop: true, callback: () => this.renderStaff() });
 
     // hlášky, ktoré prišli, kým HUD nebežal (návrat z expedície, offline progres, poškodený save)
     session.hudActive = true;
@@ -123,10 +125,12 @@ export class UIScene extends Phaser.Scene {
       const selected = m.kind === 'assign' && m.sinnerId === s.id;
       const lvl = levelFromXp(s.xp);
       const where = s.assignedTo === null ? 'čakáreň' : BUILDINGS[store.building(s.assignedTo)?.type ?? 'intake'].name;
-      const line1 = `${selected ? '▶ ' : ''}${s.name}  Lv${lvl} (${Math.floor(s.xp)}/${xpForLevel(lvl + 1)})`;
-      const row = this.add
-        .text(PANEL.x, y, `${line1}\n  ${where} · ${s.traits.map((t) => TRAITS[t].name).join(', ')}`, this.style(10, selected ? C.accent : C.text))
-        .setLineSpacing(2);
+      const level = lvl >= MAX_LEVEL ? `Lv${lvl} MAX` : `Lv${lvl} (${Math.floor(s.xp)}/${xpForLevel(lvl + 1)})`;
+      const line1 = `${selected ? '▶ ' : ''}${s.role === 'lead' ? 'VEDÚCI ' : ''}${s.name}  ${level}`;
+      const tired = s.fatigue > COFFEE_BREAK_AT;
+      const detail = tired ? `únava ${pct(s.fatigue)} %` : s.traits.map((t) => TRAITS[t].name).join(', ');
+      const color = selected ? C.accent : tired ? C.bad : s.role === 'worker' && isMaxLevel(s) ? C.good : C.text;
+      const row = this.add.text(PANEL.x, y, `${line1}\n  ${where} · ${detail}`, this.style(10, color)).setLineSpacing(2);
       this.clickable(row, () => this.toggleAssign(s.id));
       row.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OVER, () => this.hoverText.setText(this.describeSinner(s)));
       this.staff.add(row);
@@ -136,21 +140,31 @@ export class UIScene extends Phaser.Scene {
     }
 
     const rows = Math.min(sinners.length, MAX_ROWS) + (sinners.length > MAX_ROWS ? 0.5 : 0);
-    const by = PANEL.y + 34 + ROW_H * rows;
-    const affordable = canAfford(store.state.resources, HIRE_COST);
-    const hire = this.add.text(PANEL.x, by, `[H] Prijať hriešnika (${formatAmounts(HIRE_COST)})`, this.style(11, affordable ? C.good : C.dim));
-    this.clickable(hire, () => this.hire());
-    this.staff.add(hire);
-    const inv = this.add.text(PANEL.x, by + 14, `[I] Sklad a výbava (${store.state.inventory.length})`, this.style(11, C.muted));
-    this.clickable(inv, () => this.inventory.toggle());
-    this.staff.add(inv);
-    if (m.kind === 'assign' && store.sinner(m.sinnerId)?.assignedTo !== null) {
-      const free = this.add.text(PANEL.x, by + 28, '[U] Poslať do čakárne', this.style(11, C.muted));
-      this.clickable(free, () => this.unassignSelected());
-      this.staff.add(free);
+    let by = PANEL.y + 34 + ROW_H * rows;
+    const button = (label: string, color: string, onClick: () => void): void => {
+      const t = this.add.text(PANEL.x, by, label, this.style(11, color));
+      this.clickable(t, onClick);
+      this.staff.add(t);
+      by += 14;
+    };
+    button(`[H] Prijať hriešnika (${formatAmounts(HIRE_COST)})`, canAfford(store.state.resources, HIRE_COST) ? C.good : C.dim, () => this.hire());
+    button(`[I] Sklad a výbava (${store.state.inventory.length})`, C.muted, () => this.inventory.toggle());
+    const chosen = m.kind === 'assign' ? store.sinner(m.sinnerId) : undefined;
+    if (chosen !== undefined && chosen.assignedTo !== null) button('[U] Poslať do čakárne', C.muted, () => this.unassignSelected());
+    if (chosen !== undefined && isMaxLevel(chosen)) {
+      if (chosen.role === 'worker') button(`[P] Povýšiť na vedúceho (+${pct(LEAD_BONUS - 1)} % budova)`, C.good, () => this.promoteSelected());
+      button(`[R] Dôchodok (+${pct(PENSION_BONUS)} % celá výroba)`, C.good, () => this.retireSelected());
     }
-    this.staffBg.setSize(PANEL.w + 4, by - PANEL.y + 48);
-    this.staffBg.input?.hitArea.setTo(0, 0, PANEL.w + 4, by - PANEL.y + 48);
+    if (store.state.retirees.length > 0) {
+      const t = this.add.text(PANEL.x, by, `Dôchodkový fond: ${store.state.retirees.length} · výroba +${store.pensionPercent()} %`, this.style(10, C.dim));
+      t.setInteractive().on(Phaser.Input.Events.GAMEOBJECT_POINTER_OVER, () =>
+        this.hoverText.setText(`Na dôchodku: ${store.state.retirees.slice(-12).join(', ')}. Plaketa na chodbe, výplata nikdy.`),
+      );
+      this.staff.add(t);
+      by += 14;
+    }
+    this.staffBg.setSize(PANEL.w + 4, by - PANEL.y + 6);
+    this.staffBg.input?.hitArea.setTo(0, 0, PANEL.w + 4, by - PANEL.y + 6);
   }
 
   private createBuildBar(): void {
@@ -205,20 +219,30 @@ export class UIScene extends Phaser.Scene {
     }
     const d = BUILDINGS[b.type];
     const workers = workersOf(store.state, b.id);
+    const lead = leadOf(store.state, b.id);
     const rate = buildingRate(store.state, b);
+    const leadLine = lead === undefined ? [] : [`  vedúci: ${lead.name} (deleguje)`];
     const crew =
       workers.length === 0
         ? '  nikto – vyberte hriešnika v Personálnom a kliknite sem'
         : workers
-            .map((w) => `  ${w.name} ${Math.round(sinnerEfficiency(w, b.type, workers.filter((o) => o !== w)) * 100)} %`)
+            .map((w) => {
+              const burnt = burnoutMult(w.fatigue) < 1 ? ' (vyhorený – chýba káva)' : '';
+              return `  ${w.name} ${pct(sinnerEfficiency(w, b.type, workers.filter((o) => o !== w)))} %${burnt}`;
+            })
             .join('\n');
+    const bonuses = [
+      lead === undefined ? '' : `vedúci +${pct(LEAD_BONUS - 1)} %`,
+      store.state.retirees.length === 0 ? '' : `fond +${store.pensionPercent()} %`,
+    ].filter((x) => x !== '');
     const cycle = rate > 0 ? `${(d.cycleMs / rate / 1000).toFixed(1)} s/cyklus` : '—';
     this.infoText.setText(
       [
         `${d.name}  [${STATUS_LABEL[b.status]}]  ${Math.floor(b.progress * 100)} %  · ${cycle}`,
         this.recipe(b.type),
-        `Pracovníci ${workers.length}/${d.maxWorkers}:`,
+        `Pracovníci ${workers.length}/${d.maxWorkers}${bonuses.length > 0 ? ` · ${bonuses.join(' · ')}` : ''}:`,
         crew,
+        ...leadLine,
       ].join('\n'),
     );
   }
@@ -230,7 +254,14 @@ export class UIScene extends Phaser.Scene {
   }
 
   private describeSinner(s: SinnerState): string {
-    return `${s.name} – hriech: ${s.sin}.\n${s.traits.map((t) => `${TRAITS[t].name}: ${TRAITS[t].description}`).join('\n')}`;
+    const career =
+      s.role === 'lead'
+        ? `Vedúci: sám nepracuje, budova +${pct(LEAD_BONUS - 1)} %.`
+        : isMaxLevel(s)
+          ? 'Na strope. Vyberte ho a zvoľte [P] povýšenie alebo [R] dôchodok – alebo nech robí ďalej.'
+          : `Únava ${pct(s.fatigue)} % – nad ${pct(COFFEE_BREAK_AT)} % si dá kávu zo skladu, bez nej vyhorí.`;
+    const traits = s.traits.map((t) => `${TRAITS[t].name}: ${TRAITS[t].description}`).join('\n');
+    return `${s.name} – hriech: ${s.sin}. ${career}\n${traits}`;
   }
 
   /** Krátka hláška hore v strede; najviac 3 naraz, najnovšia hore. */
@@ -278,6 +309,23 @@ export class UIScene extends Phaser.Scene {
     if (!r.ok) this.toast(r.reason, 'warn');
   }
 
+  private promoteSelected(): void {
+    const m = session.mode;
+    if (m.kind !== 'assign') return;
+    const r = session.store.promote(m.sinnerId);
+    if (!r.ok) this.toast(r.reason, 'warn');
+    this.renderStaff();
+  }
+
+  private retireSelected(): void {
+    const m = session.mode;
+    if (m.kind !== 'assign') return;
+    const r = session.store.retire(m.sinnerId);
+    if (!r.ok) this.toast(r.reason, 'warn');
+    else session.resetMode();
+    this.renderStaff();
+  }
+
   private unassignSelected(): void {
     const m = session.mode;
     if (m.kind !== 'assign') return;
@@ -292,6 +340,8 @@ export class UIScene extends Phaser.Scene {
       if (type !== undefined) this.toggleBuild(type);
       else if (e.key === 'h' || e.key === 'H') this.hire();
       else if (e.key === 'u' || e.key === 'U') this.unassignSelected();
+      else if (e.key === 'p' || e.key === 'P') this.promoteSelected();
+      else if (e.key === 'r' || e.key === 'R') this.retireSelected();
       else if (e.key === 'i' || e.key === 'I') this.inventory.toggle();
       else if (e.key === 'Escape') this.escape();
     });
@@ -328,6 +378,11 @@ export class UIScene extends Phaser.Scene {
       store.events.on('sinnerHired', () => this.renderStaff()),
       store.events.on('sinnerAssigned', () => this.renderStaff()),
       store.events.on('levelUp', () => this.renderStaff()),
+      store.events.on('careerChanged', () => this.renderStaff()),
+      store.events.on('sinnerRetired', () => {
+        this.hoverText.setText('');
+        this.renderStaff();
+      }),
       store.events.on('inventoryChanged', () => this.renderStaff()),
       store.events.on('buildingUnlocked', () => this.renderBuildBar()),
       store.events.on('notice', (n) => this.toast(n.text, n.tone)),

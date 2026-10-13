@@ -1,8 +1,10 @@
 import { BUILDING_TYPES } from '@/data/buildings';
+import { SINNER_ROLES } from '@/data/careers';
 import { AFFIX_IDS, BASE_ITEM_IDS, type Item, RARITIES } from '@/data/items';
 import { RESOURCE_IDS } from '@/data/resources';
 import { TRAIT_IDS } from '@/data/traits';
 import type { BuildingState, GameState, SinnerState } from '@/state/GameState';
+import { MAX_XP } from '@/systems/staff/sinners';
 
 /**
  * Ukladanie: JSON v localStorage + verzie s migráciami.
@@ -12,7 +14,7 @@ import type { BuildingState, GameState, SinnerState } from '@/state/GameState';
 export const SAVE_KEY = 'purgatory-logistics.save';
 /** Sem sa odloží poškodený save, aby sa dal ručne zachrániť. */
 export const CORRUPT_BACKUP_KEY = 'purgatory-logistics.save.corrupt';
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export interface Settings {
   /** 0..1 */
@@ -62,6 +64,12 @@ const MIGRATIONS: Readonly<Record<number, (state: Json) => Json>> = {
     const progress = isObj(s.progress) ? s.progress : {};
     return { ...s, progress: { ...progress, deepestFloor: progress.deepestFloor ?? 0 } };
   },
+  // v2 → v3: kariéra hriešnikov – rola, únava, dôchodkový fond
+  2: (s) => ({
+    ...s,
+    sinners: Array.isArray(s.sinners) ? s.sinners.map((x) => (isObj(x) ? { role: 'worker', fatigue: 0, ...x } : x)) : s.sinners,
+    retirees: s.retirees ?? [],
+  }),
 };
 
 // ---------------------------------------------------------------- validácia
@@ -119,11 +127,21 @@ function validateState(raw: unknown): GameState {
       sin: str(o.sin, `sinners[${i}].sin`),
       traits: arr(o.traits, `sinners[${i}].traits`, 4).map((t, j) => oneOf(t, TRAIT_IDS, `sinners[${i}].traits[${j}]`)),
       look: Math.floor(num(o.look, `sinners[${i}].look`, 0)),
-      xp: num(o.xp, `sinners[${i}].xp`, 0),
+      xp: Math.min(MAX_XP, num(o.xp, `sinners[${i}].xp`, 0)),
+      role: oneOf(o.role, SINNER_ROLES, `sinners[${i}].role`),
+      fatigue: Math.min(1, num(o.fatigue, `sinners[${i}].fatigue`, 0)),
       // pridelenie do neexistujúcej budovy = späť do čakárne, nie chyba
       assignedTo: assigned !== null && buildingIds.has(assigned) ? assigned : null,
     };
   });
+
+  // najviac jeden vedúci na budovu – ďalší idú do čakárne
+  const led = new Set<string>();
+  for (const x of sinners) {
+    if (x.role !== 'lead' || x.assignedTo === null) continue;
+    if (led.has(x.assignedTo)) x.assignedTo = null;
+    else led.add(x.assignedTo);
+  }
 
   const inventory: Item[] = arr(s.inventory, 'inventory', 100).map((x, i) => {
     const o = obj(x, `inventory[${i}]`);
@@ -157,6 +175,7 @@ function validateState(raw: unknown): GameState {
       kills: num(progress.kills, 'progress.kills', 0),
       deepestFloor: Math.floor(num(progress.deepestFloor, 'progress.deepestFloor', 0)),
     },
+    retirees: arr(s.retirees, 'retirees', 1000).map((n, i) => str(n, `retirees[${i}]`)),
     rngSeed: num(s.rngSeed, 'rngSeed') >>> 0,
     nextId: Math.floor(num(s.nextId, 'nextId', 0)),
   };

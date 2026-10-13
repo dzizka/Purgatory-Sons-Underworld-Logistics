@@ -4,11 +4,14 @@ import { BUILDING_TYPES, BUILDINGS, type BuildingType } from '@/data/buildings';
 import { BASE_ITEMS, INVENTORY_LIMIT, type Item, RARITY } from '@/data/items';
 import { canAfford, formatAmounts, gain, spend, type ResourceAmounts, type Resources } from '@/data/resources';
 import type { BuildingState, GameState, SinnerState } from '@/state/GameState';
-import { tickProduction, workersOf } from '@/systems/base/production';
+import { MAX_LEVEL, PENSION_BONUS, PENSION_MAX } from '@/data/careers';
+import { leadOf, tickBase, workersOf } from '@/systems/base/production';
 import { itemName, type Loadout, resolveLoadout } from '@/systems/loot/loot';
-import { generateSinner, levelFromXp } from '@/systems/staff/sinners';
+import { generateSinner, isMaxLevel, levelFromXp } from '@/systems/staff/sinners';
 
 export const HIRE_COST = { souls: 3 } as const;
+/** Koľko mien si dôchodkový fond pamätá (bonus sa počíta len do `PENSION_MAX`). */
+const RETIREES_KEPT = 100;
 
 export interface GameEvents {
   resourcesChanged: Readonly<Resources>;
@@ -17,6 +20,9 @@ export interface GameEvents {
   sinnerHired: SinnerState;
   sinnerAssigned: { sinner: SinnerState; building: BuildingState | null };
   levelUp: SinnerState;
+  /** Povýšenie na vedúceho. */
+  careerChanged: SinnerState;
+  sinnerRetired: SinnerState;
   notice: { text: string; tone: 'info' | 'warn' };
   inventoryChanged: null;
   buildingUnlocked: BuildingType;
@@ -39,6 +45,7 @@ export function createInitialState(seed: number): GameState {
     ],
     equipment: { melee: 'i-start-melee', ranged: 'i-start-ranged', trinket: null },
     progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0, deepestFloor: 0 },
+    retirees: [],
     rngSeed: seed >>> 0,
     nextId: 1,
   };
@@ -70,19 +77,67 @@ export class GameStore {
   }
 
   tick(dtMs: number): void {
-    const results = tickProduction(this.state, dtMs);
-    if (results.length === 0) return;
-    for (const r of results) {
+    const { cycles, fatigue } = tickBase(this.state, dtMs);
+    const [first, ...others] = fatigue.burnedOut;
+    if (first !== undefined) {
+      const who = others.length === 0 ? `${first.name} vyhorel` : `${first.name} a ďalší (${others.length}) vyhoreli`;
+      this.events.emit('notice', { text: `${who}. Bez kávy pracujú na polovicu – postavte Kávovar.`, tone: 'warn' });
+    }
+    if (cycles.length === 0 && fatigue.coffeeBreaks === 0) return;
+    for (const r of cycles) {
       this.events.emit('cycleCompleted', { building: r.building });
       for (const s of r.levelUps) {
         this.events.emit('levelUp', s);
+        const lvl = levelFromXp(s.xp);
         this.events.emit('notice', {
-          text: `${s.name} povýšený na úroveň ${levelFromXp(s.xp)}. Plat ostáva rovnaký.`,
+          text:
+            lvl >= MAX_LEVEL
+              ? `${s.name} dosiahol strop (úroveň ${MAX_LEVEL}). V Personálnom: [P] povýšiť na vedúceho, [R] dôchodok.`
+              : `${s.name} povýšený na úroveň ${lvl}. Plat ostáva rovnaký.`,
           tone: 'info',
         });
       }
     }
     this.events.emit('resourcesChanged', this.state.resources);
+  }
+
+  /** Bonus dôchodkového fondu v percentách (pre UI). */
+  pensionPercent(): number {
+    return Math.round(PENSION_BONUS * Math.min(PENSION_MAX, this.state.retirees.length) * 100);
+  }
+
+  /** Hriešnik na strope sa stane vedúcim: nepracuje, ale jeho budova ide o 25 % rýchlejšie. */
+  promote(sinnerId: string): Result {
+    const s = this.sinner(sinnerId);
+    if (s === undefined) return fail('Taký zamestnanec neexistuje.');
+    if (s.role === 'lead') return fail(`${s.name} už je vedúci. Vyššie je len predstavenstvo a tam sa nedostane nikto.`);
+    if (!isMaxLevel(s)) return fail(`Povýšiť sa dá až na úrovni ${MAX_LEVEL}. Dovtedy je to len „talent“.`);
+    s.role = 'lead';
+    s.fatigue = 0;
+    // v budove už vedúci je → nový ide do čakárne, dvaja vedúci = nekonečná porada
+    if (s.assignedTo !== null && leadOf(this.state, s.assignedTo) !== s) s.assignedTo = null;
+    this.events.emit('careerChanged', s);
+    this.events.emit('notice', { text: `${s.name} povýšený na vedúceho. Odteraz už len deleguje (+25 % pre budovu).`, tone: 'info' });
+    return { ok: true };
+  }
+
+  /** Hriešnik na strope odíde do dôchodku: zmizne z personálu, celá výroba je trvalo rýchlejšia. */
+  retire(sinnerId: string): Result {
+    const s = this.sinner(sinnerId);
+    if (s === undefined) return fail('Taký zamestnanec neexistuje.');
+    if (!isMaxLevel(s)) return fail(`Do dôchodku až na úrovni ${MAX_LEVEL}. Večnosť je dlhá, odpracujte si ju.`);
+    this.state.sinners = this.state.sinners.filter((o) => o !== s);
+    this.state.retirees.push(s.name);
+    this.state.retirees.splice(0, Math.max(0, this.state.retirees.length - RETIREES_KEPT));
+    const full = this.state.retirees.length > PENSION_MAX;
+    this.events.emit('sinnerRetired', s);
+    this.events.emit('notice', {
+      text: full
+        ? `${s.name} odchádza do dôchodku. Fond je plný, bonus ostáva +${this.pensionPercent()} %. Aspoň sa uvoľnilo miesto.`
+        : `${s.name} odchádza do dôchodku. Celá výroba +${this.pensionPercent()} %. Penzia je krátka, večnosť dlhá.`,
+      tone: 'info',
+    });
+    return { ok: true };
   }
 
   isUnlocked(type: BuildingType): boolean {
@@ -223,6 +278,13 @@ export class GameStore {
     if (b === undefined) return fail('Budova neexistuje. Ani v papieroch.');
     if (s.assignedTo === b.id) return { ok: true };
     const def = BUILDINGS[b.type];
+    if (s.role === 'lead') {
+      const other = leadOf(this.state, b.id);
+      if (other !== undefined) return fail(`${def.name} už má vedúceho (${other.name}). Dvaja vedúci = nekonečná porada.`);
+      s.assignedTo = b.id;
+      this.events.emit('sinnerAssigned', { sinner: s, building: b });
+      return { ok: true };
+    }
     if (workersOf(this.state, b.id).length >= def.maxWorkers) {
       return fail(`${def.name} je plná (${def.maxWorkers}). Aj peklo má bezpečnostné predpisy.`);
     }

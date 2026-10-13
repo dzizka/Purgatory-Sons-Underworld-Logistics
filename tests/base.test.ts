@@ -7,7 +7,7 @@ import { generateSinner, levelFromXp, sinnerEfficiency } from '@/systems/staff/s
 import { Rng } from '@/core/rng';
 
 function sinner(id: string, traits: TraitId[] = [], xp = 0): SinnerState {
-  return { id, name: id, sin: '-', traits, look: 0, xp, assignedTo: null };
+  return { id, name: id, sin: '-', traits, look: 0, xp, role: 'worker', fatigue: 0, assignedTo: null };
 }
 
 /** Prázdny stav s danými hriešnikmi a dostatkom surovín. */
@@ -22,6 +22,7 @@ function freshStore(sinners: SinnerState[] = []): GameStore {
     equipment: { melee: null, ranged: null, trinket: null },
     // všetko odomknuté – tieto testy overujú produkciu, nie progresiu
     progress: { expeditionsWon: 99, expeditionsLost: 0, kills: 999, deepestFloor: 0 },
+    retirees: [],
     rngSeed: 1,
     nextId: 100,
   };

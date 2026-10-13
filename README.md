@@ -23,6 +23,7 @@ npm run preview    # lokálny náhľad produkčného buildu
 | 1 – 5 | stavebný režim (Podateľňa, Kávovar, Kopírka, Mučiareň, Školiaca miestnosť), Shift + klik = stavať viackrát |
 | klik na hriešnika (vo svete alebo v Personálnom) → klik na budovu | pridelenie do práce |
 | U | poslať vybraného hriešnika do čakárne |
+| P / R | hriešnik na úrovni 10: povýšiť na vedúceho / poslať do dôchodku |
 | H | nábor nového hriešnika (3 duše) |
 | klik na budovu | detail: stav, recept, efektivita pracovníkov |
 | Esc / pravé tlačidlo | zrušiť režim |
@@ -38,7 +39,9 @@ Z nepriateľov padá **korisť** (farebný drahokam = rarita: bežné, byrokrati
 Nepriatelia pred úderom zastanú a pod nimi sa rozsvieti červený výsek – vtedy uskočte. Smrť = disciplinárne konanie a korisť prepadá. Základňa medzitým vyrába ďalej.
 
 **Ekonomika:** Podateľňa → Duše · Kávovar → Káva · Kopírka: Duša → 3 Formuláre · Mučiareň: Duša + 2 Formuláre + Káva → 6 Síry · Školiaca miestnosť: Káva → XP.
-Vlastnosti hriešnikov (Workoholik, Prokrastinátor, Mikromanažér, Introvert…) menia výkon; skúsenosti zvyšujú úroveň (+10 % / level).
+Vlastnosti hriešnikov (Workoholik, Prokrastinátor, Mikromanažér, Introvert…) menia výkon; skúsenosti zvyšujú úroveň (+10 % / level, najviac úroveň 10).
+
+**Kariéra:** na úrovni 10 sa dá hriešnik **povýšiť na vedúceho** (sám nepracuje, budova +25 %) alebo poslať do **dôchodku** (zmizne, celá výroba trvalo +5 %, najviac +50 %) – alebo nech robí ďalej. Pracovníci sa unavujú a sami si berú kávu zo skladu; bez kávy **vyhoria** a robia na polovicu.
 
 S `?debug` v URL je inštancia hry dostupná v konzole ako `window.__game`.
 

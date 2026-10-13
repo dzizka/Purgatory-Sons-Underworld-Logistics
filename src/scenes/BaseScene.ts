@@ -11,7 +11,7 @@ import { Player } from '@/entities/Player';
 import { SinnerView } from '@/entities/SinnerView';
 import type { BuildingState } from '@/state/GameState';
 import { session } from '@/state/session';
-import { workersOf } from '@/systems/base/production';
+import { leadOf, workersOf } from '@/systems/base/production';
 import { itemName } from '@/systems/loot/loot';
 import { workerSlots } from '@/systems/base/slots';
 import type { CollisionGrid } from '@/systems/movement/movement';
@@ -111,6 +111,14 @@ export class BaseScene extends Phaser.Scene {
         this.layoutSinners();
       }),
       store.events.on('sinnerAssigned', () => this.layoutSinners()),
+      store.events.on('careerChanged', () => this.layoutSinners()),
+      store.events.on('sinnerRetired', (s) => {
+        this.sinnerViews.get(s.id)?.destroy();
+        this.sinnerViews.delete(s.id);
+        const m = session.mode;
+        if (m.kind === 'assign' && m.sinnerId === s.id) session.resetMode();
+        this.layoutSinners();
+      }),
       session.ui.on('modeChanged', () => this.refreshSelection()),
       session.ui.on('buildingSelected', () => this.refreshSelection()),
     ];
@@ -237,10 +245,12 @@ export class BaseScene extends Phaser.Scene {
         v.goTo(spot, null, false);
         continue;
       }
-      const crew = workersOf(state, b.id);
+      // vedúci stojí na poslednom mieste a len sa díva (deleguje)
+      const lead = leadOf(state, b.id);
+      const crew = [...workersOf(state, b.id), ...(lead === undefined ? [] : [lead])];
       const slots = workerSlots(b.tx, b.ty, crew.length, (tx, ty) => !this.collision.isBlocked(tx, ty));
       const slot = slots[crew.indexOf(s)] ?? { x: b.tx + 0.6, y: b.ty + 0.6 };
-      v.goTo(slot, { x: b.tx, y: b.ty }, true);
+      v.goTo(slot, { x: b.tx, y: b.ty }, s.role === 'worker');
     }
     this.refreshSelection();
   }
