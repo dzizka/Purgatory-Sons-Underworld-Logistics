@@ -102,7 +102,8 @@ WorldY = (ScreenY / (TH/2) - ScreenX / (TW/2)) / 2
 │   ├── state/
 │   │   ├── GameState.ts          # typy celého stavu
 │   │   ├── store.ts              # in-memory store + príkazy
-│   │   └── save.ts               # localStorage, verzie, migrácie
+│   │   ├── session.ts            # aktívna relácia: store + zdieľaný stav UI (režim, výber)
+│   │   └── save.ts               # localStorage, verzie, migrácie (Fáza 6)
 │   ├── ui/                       # HUD komponenty, okná, tooltipy
 │   ├── data/                     # statické definície (JSON/TS): budovy, zbrane, traity, texty
 │   └── types/                    # zdieľané typy

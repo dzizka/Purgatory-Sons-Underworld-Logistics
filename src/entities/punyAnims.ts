@@ -8,6 +8,8 @@ const CLIPS = {
   idle: { frames: [0], rate: 1, repeat: -1 },
   walk: { frames: [1, 2, 3, 4], rate: 8, repeat: -1 },
   sword: { frames: [5, 6, 7], rate: 12, repeat: 0 },
+  /** „Práca“ = pomalé mávanie mečom. Na papierovanie sa to podobá prekvapivo dobre. */
+  work: { frames: [5, 6, 7, 6], rate: 5, repeat: -1 },
   hurt: { frames: [18, 19, 20], rate: 12, repeat: 0 },
   death: { frames: [21, 22, 23], rate: 6, repeat: 0 },
 } as const;

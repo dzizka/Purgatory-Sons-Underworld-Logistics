@@ -61,6 +61,25 @@ def half_blocks(sheet: Path, row: int, cols: list[int]) -> Image.Image:
     return strip([im.crop((c * BLOCK, y, (c + 1) * BLOCK, y + BLOCK)) for c in cols])
 
 
+def block_at(sheet: Path, row: int, col: int) -> Image.Image:
+    im = magenta_to_alpha(Image.open(sheet))
+    y = row * 2 * BLOCK
+    return im.crop((col * BLOCK, y, (col + 1) * BLOCK, y + BLOCK))
+
+
+# budova → (sheet, stĺpec plného bloku v riadku 0)
+BUILDING_BLOCKS = {
+    "intake": ("Stone_Black_Marked", 0),
+    "coffee": ("Brick_Brown", 0),
+    "copier": ("Lab_Metal", 4),
+    "torture": ("Bars_Red", 0),
+    "training": ("Church", 0),
+}
+
+# vzhľady hriešnikov (index = SinnerState.look)
+SINNER_SHEETS = ["Human-Worker-Cyan", "Orc-Peon-Cyan", "Orc-Peon-Red", "Mage-Red"]
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--soup", type=Path, required=True, help="rozbalený Isometric Stone Soup")
@@ -79,7 +98,13 @@ def main() -> None:
     # polovičné kovové bloky = „kancelárske stoly“ (nepárne stĺpce = polovičné bloky)
     half_blocks(soup / "Walls" / "Block" / "ISS_Block_Lab_Metal-64x64.png", 0, [1, 3]).save(OUT / "tiles" / "desk_metal.png")
 
+    (OUT / "buildings").mkdir(parents=True, exist_ok=True)
+    for name, (sheet, col) in BUILDING_BLOCKS.items():
+        block_at(soup / "Walls" / "Block" / f"ISS_Block_{sheet}-64x64.png", 0, col).save(OUT / "buildings" / f"{name}.png")
+
     shutil.copy(puny / "Human-Worker-Red.png", OUT / "sprites" / "manager.png")
+    for i, sheet in enumerate(SINNER_SHEETS):
+        shutil.copy(puny / f"{sheet}.png", OUT / "sprites" / f"sinner_{i}.png")
 
     shutil.copy(MUSIC_SRC / "Searching.ogg", OUT / "audio" / "music_base.ogg")
 

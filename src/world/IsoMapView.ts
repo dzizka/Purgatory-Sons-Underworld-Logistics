@@ -18,7 +18,7 @@ export class IsoMapView {
   /** Obdĺžnik mapy v obrazovkových pixeloch – pre hranice kamery. */
   readonly bounds: Phaser.Geom.Rectangle;
   /** Bloky, ktoré môžu zakryť postavu – pre priehľadnosť pri prekrytí. */
-  readonly occluders: readonly IsoSprite[];
+  readonly occluders: IsoSprite[];
 
   constructor(scene: Phaser.Scene, map: ParsedMap) {
     const { grid } = map;
@@ -46,7 +46,8 @@ export class IsoMapView {
 
   /** Bloky pred postavou, ktoré ju na obrazovke prekrývajú, spriehľadní. */
   fadeOccluders(target: IsoSprite): void {
-    const t = target.getBounds();
+    // Iba telo postavy (snímka je väčšinou priehľadná), inak by blednul pol mapy.
+    const t = new Phaser.Geom.Rectangle(target.x - 10, target.y - 30, 20, 30);
     const r = new Phaser.Geom.Rectangle();
     for (const o of this.occluders) {
       const covers = o.depth > target.depth && Phaser.Geom.Intersects.RectangleToRectangle(t, o.getBounds(r));

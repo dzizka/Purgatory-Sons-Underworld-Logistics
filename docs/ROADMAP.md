@@ -40,21 +40,21 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 
 ---
 
-## Fáza 3 – Základňa: Zdroje, budovy & hriešnici
+## Fáza 3 – Základňa: Zdroje, budovy & hriešnici ✅
 **Cieľ:** Manažérska slučka (IKEA efekt + Zeigarnik).
 
 - `GameState` + `store` (čistý TS), typovaný `EventBus`
 - Zdroje: *Duše*, *Formuláre*, *Síra*, *Káva (nekonečne chýbajúca)*
-- Budovy: Podateľňa, Kopírka utrpenia, Open-space mučiareň – stavba na gride, produkčné časovače
+- Budovy: Podateľňa, Kávovar, Kopírka utrpenia, Open-space mučiareň, Školiaca miestnosť – stavba na gride, produkčné cykly, blokovanie pri chýbajúcich vstupoch
 - Hriešnici: generátor s traitmi (seedovaný RNG) – napr. *Mikromanažér*, *Odpovedá „reply all“*, *Vegán v pekle*
 - Priraďovanie hriešnikov k budovám, tréning (XP → lepší výkon)
-- `UIScene` HUD: zdroje, fronta úloh, tooltipy s cynickým flavor textom
+- `UIScene` HUD: zdroje, Personálne oddelenie, stavebná lišta, detail budovy (stav, recept, efektivita pracovníkov), hlášky s cynickým flavor textom
 - Produkcia beží v `systems/base` nezávisle od aktívnej scény
 
 **Definition of Done**
-- [ ] Postavím budovu, priradím hriešnika, vidím rast zdrojov v HUD
-- [ ] Traity merateľne menia produkciu (pokryté unit testami)
-- [ ] Systémy v `systems/` neimportujú `phaser` (kontrolované lint pravidlom / testom)
+- [x] Postavím budovu, priradím hriešnika, vidím rast zdrojov v HUD
+- [x] Traity merateľne menia produkciu (pokryté unit testami)
+- [x] Systémy v `systems/` (aj `core/`, `state/`, `data/`) neimportujú `phaser` (kontrolované testom)
 
 ---
 

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /** Herná logika musí byť testovateľná bez canvasu → v týchto priečinkoch je Phaser zakázaný. */
-const PURE_DIRS = ['src/core', 'src/systems'];
+const PURE_DIRS = ['src/core', 'src/systems', 'src/state', 'src/data'];
 
 function tsFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
