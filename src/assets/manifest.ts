@@ -164,6 +164,16 @@ export const ASSETS = {
   char_sinner_3: punySheet('assets/sprites/sinner_3.png', 0xb53f4a),
   char_enemy_auditor: punySheet('assets/sprites/enemy_auditor.png', 0x5a8a3a),
   char_enemy_compliance: punySheet('assets/sprites/enemy_compliance.png', 0xa03030),
+  /**
+   * Boss CEO (8 Directional Businessman): 53 snímok na smer × 8 smerov, snímka 144×96, 16 stĺpcov
+   * (27 riadkov = 432 buniek, posledných 8 prázdnych). Generuje `tools/import_assets.py`.
+   */
+  char_boss_ceo: {
+    url: 'assets/sprites/boss_ceo.png',
+    sheet: { frameWidth: 144, frameHeight: 96, frames: 16 * 27 },
+    origin: { x: 0.5, y: 65 / 96 },
+    placeholder: { kind: 'capsule', width: 26, height: 40, fill: 0x2a7a6a, outline: 0x10241f },
+  },
   bld_intake: buildingBlock('assets/buildings/intake.png', 0x2a2a2a, 0x1a1a1a, 0x101010),
   bld_coffee: buildingBlock('assets/buildings/coffee.png', 0x9a5a2a, 0x7a421c, 0x5c3214),
   bld_copier: buildingBlock('assets/buildings/copier.png', 0x6a5a55, 0x4a3e3a, 0x3a302c),
@@ -191,6 +201,7 @@ export const BUILDING_TEXTURE = {
 export const ENEMY_TEXTURE = {
   auditor: 'char_enemy_auditor',
   compliance: 'char_enemy_compliance',
+  ceo: 'char_boss_ceo',
 } as const satisfies Record<EnemyKind, AssetKey>;
 
 /** Sada textúr pre jednu mapu. */

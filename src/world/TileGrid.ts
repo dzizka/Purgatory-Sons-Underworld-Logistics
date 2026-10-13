@@ -11,7 +11,7 @@ export interface PropPlacement {
   readonly ty: number;
 }
 
-export type EnemySpawnKind = 'auditor' | 'compliance';
+export type EnemySpawnKind = 'auditor' | 'compliance' | 'ceo';
 
 export interface ParsedMap {
   readonly grid: TileGrid;
@@ -36,10 +36,11 @@ const LEGEND: Readonly<Record<string, TileKind>> = {
   L: 'floor',
   a: 'floor',
   c: 'floor',
+  B: 'floor',
   ' ': 'void',
 };
 
-const ENEMY_CHARS: Readonly<Record<string, EnemySpawnKind>> = { a: 'auditor', c: 'compliance' };
+const ENEMY_CHARS: Readonly<Record<string, EnemySpawnKind>> = { a: 'auditor', c: 'compliance', B: 'ceo' };
 
 const BLOCKING: ReadonlySet<TileKind> = new Set<TileKind>(['wall', 'pillar', 'desk', 'void']);
 
@@ -85,7 +86,7 @@ export function tileVariant(tx: number, ty: number, variants: number): number {
 /**
  * ASCII mapa → grid. Riadok = world y, stĺpec = world x.
  * `.` podlaha, `#` stena, `P` stĺp, `D` stôl, `@` spawn, `X` výťah, `v` schodisko dole, `L` korisť,
- * `a` / `c` nepriateľ (audítor / compliance officer) na podlahe, medzera = prázdno.
+ * `a` / `c` nepriateľ (audítor / compliance officer) na podlahe, `B` boss CEO, medzera = prázdno.
  */
 export function parseMap(rows: readonly string[]): ParsedMap {
   const height = rows.length;

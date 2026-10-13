@@ -3,8 +3,9 @@ import { GAME_HEIGHT, GAME_WIDTH } from '@/config/constants';
 import { formatAmounts, RESOURCE_IDS, RESOURCE_INFO } from '@/data/resources';
 import type { ExpeditionOutcome, ExpeditionScene } from '@/scenes/ExpeditionScene';
 import { session } from '@/state/session';
-import { aliveEnemies } from '@/systems/combat/expedition';
-import { floorName } from '@/data/dungeon';
+import { aliveEnemies, bossOf } from '@/systems/combat/expedition';
+import { floorName, isBossFloor } from '@/data/dungeon';
+import { ENEMIES } from '@/data/enemies';
 
 const STYLE = (size: number, color: string): Phaser.Types.GameObjects.Text.TextStyle => ({
   fontFamily: 'monospace',
@@ -18,6 +19,7 @@ export class ExpeditionUIScene extends Phaser.Scene {
   private status!: Phaser.GameObjects.Text;
   private base!: Phaser.GameObjects.Text;
   private hint!: Phaser.GameObjects.Text;
+  private bossName!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'ExpeditionUIScene' });
@@ -44,6 +46,16 @@ export class ExpeditionUIScene extends Phaser.Scene {
       )
       .setDepth(1);
 
+    this.bossName = this.add.text(GAME_WIDTH / 2, 116, '', STYLE(12, '#ffd080')).setOrigin(0.5, 0).setAlign('center');
+    if (isBossFloor(depth)) {
+      const banner = this.add
+        .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 80, 'POSCHODIE VEDENIA\nCEO vás očakáva. Porada začne, keď ho nájdete.', STYLE(16, '#ffd080'))
+        .setOrigin(0.5)
+        .setAlign('center')
+        .setStroke('#000000', 4);
+      this.tweens.add({ targets: banner, alpha: 0, delay: 2600, duration: 700, onComplete: () => banner.destroy() });
+    }
+
     const exp = this.expedition();
     exp.events.once('finished', (o: ExpeditionOutcome) => this.showOutcome(o));
   }
@@ -63,6 +75,18 @@ export class ExpeditionUIScene extends Phaser.Scene {
     const dashReady = 1 - p.dashCdMs / s.loadout.dashCooldownMs;
     this.bars.fillStyle(0x000000, 0.8).fillRect(16, 46, 200, 4);
     this.bars.fillStyle(dashReady >= 1 ? 0x7da8ff : 0x3a4a70, 1).fillRect(16, 46, 200 * dashReady, 4);
+
+    // boss: veľký pruh hore, keď o manažérovi vie
+    const boss = bossOf(s);
+    const showBoss = boss !== undefined && boss.phase !== 'idle' && boss.phase !== 'dead' && s.status === 'active';
+    this.bossName.setVisible(showBoss);
+    if (showBoss) {
+      const w = 360;
+      const x = GAME_WIDTH / 2 - w / 2;
+      this.bossName.setText(`${ENEMIES[boss.kind].name} – ${ENEMIES[boss.kind].flavor}${boss.enraged ? '\nROZZÚRENÝ: rýchlejšie údery' : ''}`);
+      this.bars.fillStyle(0x000000, 0.85).fillRect(x - 2, 100, w + 4, 12);
+      this.bars.fillStyle(boss.enraged ? 0xff4040 : 0xc08a20, 1).fillRect(x, 102, w * (boss.hp / boss.maxHp), 8);
+    }
 
     const left = aliveEnemies(s).length;
     const rewards = formatAmounts(s.rewards);

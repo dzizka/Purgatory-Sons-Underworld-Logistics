@@ -1,6 +1,20 @@
 import type { ResourceAmounts } from '@/data/resources';
 
-export type EnemyKind = 'auditor' | 'compliance';
+export type EnemyKind = 'auditor' | 'compliance' | 'ceo';
+
+/** Schopnosti bossa navyše k bežnému nápriahu a úderu. */
+export interface BossDef {
+  /** Každých toľko ms (keď už o manažérovi vie) zvolá poradu: privolá posily. */
+  readonly summonEveryMs: number;
+  readonly summonKind: Exclude<EnemyKind, 'ceo'>;
+  readonly summonCount: number;
+  /** Viac privolaných naraz nažive nebude – porada má kapacitu zasadačky. */
+  readonly maxMinions: number;
+  /** Pod týmto podielom zdravia sa rozzúri. */
+  readonly enrageAt: number;
+  readonly enrageSpeedMult: number;
+  readonly enrageWindupMult: number;
+}
 
 export interface EnemyDef {
   readonly name: string;
@@ -24,6 +38,9 @@ export interface EnemyDef {
   readonly reward: ResourceAmounts;
   /** Šanca, že po smrti nechá predmet. */
   readonly lootChance: number;
+  /** Šťastie navyše pri jeho drope (boss = lepšia rarita). */
+  readonly lootLuck?: number;
+  readonly boss?: BossDef;
 }
 
 export const ENEMIES: Readonly<Record<EnemyKind, EnemyDef>> = {
@@ -58,6 +75,32 @@ export const ENEMIES: Readonly<Record<EnemyKind, EnemyDef>> = {
     staggerable: false,
     reward: { souls: 2, forms: 3 },
     lootChance: 0.5,
+  },
+  ceo: {
+    name: 'CEO',
+    flavor: 'Generálny riaditeľ pekla. Nikdy nič neurobil sám – až doteraz.',
+    maxHp: 260,
+    speed: 1.3,
+    radius: 0.45,
+    damage: 30,
+    reach: 0.9,
+    windupMs: 950,
+    recoverMs: 800,
+    aggro: 8,
+    knockbackTaken: 0.1,
+    staggerable: false,
+    reward: { souls: 15, forms: 20, sulfur: 40 },
+    lootChance: 1,
+    lootLuck: 3,
+    boss: {
+      summonEveryMs: 9000,
+      summonKind: 'auditor',
+      summonCount: 2,
+      maxMinions: 4,
+      enrageAt: 0.5,
+      enrageSpeedMult: 1.4,
+      enrageWindupMult: 0.7,
+    },
   },
 };
 

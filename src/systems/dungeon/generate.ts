@@ -1,5 +1,5 @@
 import { Rng } from '@/core/rng';
-import { depthScaling } from '@/data/dungeon';
+import { BOSS_FLOOR_ENEMY_SHARE, depthScaling, isBossFloor } from '@/data/dungeon';
 
 /**
  * Generátor poschodí: miestnosti spojené chodbami (minimálna kostra + pár slučiek).
@@ -24,7 +24,7 @@ export interface GeneratedFloor {
   readonly depth: number;
 }
 
-const WALKABLE = new Set(['.', '@', 'X', 'v', 'L', 'a', 'c']);
+const WALKABLE = new Set(['.', '@', 'X', 'v', 'L', 'a', 'c', 'B']);
 const MAX_ATTEMPTS = 12;
 
 const center = (r: Room): { x: number; y: number } => ({ x: Math.floor(r.x + r.w / 2), y: Math.floor(r.y + r.h / 2) });
@@ -218,11 +218,16 @@ function tryGenerate(rng: Rng, depth: number): { rows: string[]; rooms: Room[] }
   c.set(start.x + 2, start.y + 2, '@');
   c.set(exit.x + 1, exit.y + 1, 'v');
 
+  // --- boss: CEO v strede najvzdialenejšej kancelárie, ostatní ho nerušia ---
+  const boss = isBossFloor(depth);
+  if (boss) c.set(Math.floor(exit.x + exit.w / 2), Math.floor(exit.y + exit.h / 2), 'B');
+
   // --- nepriatelia ---
   const s = depthScaling(depth);
+  const enemyCount = boss ? Math.round(s.enemyCount * BOSS_FLOOR_ENEMY_SHARE) : s.enemyCount;
   const spawn = { x: start.x + 2, y: start.y + 2 };
   const candidates = rooms
-    .filter((r) => r.kind !== 'start')
+    .filter((r) => r.kind !== 'start' && !(boss && r === exit))
     .flatMap((r) => {
       const cells: { x: number; y: number }[] = [];
       for (let y = r.y + 1; y < r.y + r.h - 1; y++)
@@ -230,7 +235,7 @@ function tryGenerate(rng: Rng, depth: number): { rows: string[]; rooms: Room[] }
       // zasadačky sú preplnené (porada, ktorá mohla byť e-mail)
       return r.kind === 'meeting' ? [...cells, ...cells] : cells;
     });
-  for (const cell of rng.sample(candidates, s.enemyCount)) {
+  for (const cell of rng.sample(candidates, enemyCount)) {
     if (c.get(cell.x, cell.y) !== '.') continue;
     c.set(cell.x, cell.y, rng.chance(s.complianceShare) ? 'c' : 'a');
   }

@@ -9,6 +9,7 @@ import { ENEMIES } from '@/data/enemies';
 import { PLAYER } from '@/data/player';
 import type { Resources } from '@/data/resources';
 import { type Item, RARITY } from '@/data/items';
+import { registerCeoAnims } from '@/entities/ceoAnims';
 import { punyAnimKey, registerPunyAnims, type PunyClip } from '@/entities/punyAnims';
 import type { BaseSceneData } from '@/scenes/BaseScene';
 import { session } from '@/state/session';
@@ -50,6 +51,8 @@ export type ExpeditionOutcome = {
   readonly depth: number;
   readonly rewards: Resources;
   readonly kills: number;
+  /** Koľkých CEO manažér počas výpravy porazil. */
+  readonly bossKills: number;
   /** Zdvihnutá korisť (pri prehre prepadla – je tu iba na oznámenie). */
   readonly loot: readonly Item[];
 };
@@ -124,18 +127,11 @@ export class ExpeditionScene extends Phaser.Scene {
     this.playerShadow = new IsoSprite(this, 'fx_shadow', map.spawn, { depthBias: -0.5 });
     this.player = new IsoSprite(this, 'char_player', map.spawn);
 
-    for (const kind of Object.keys(ENEMY_TEXTURE) as (keyof typeof ENEMY_TEXTURE)[]) registerPunyAnims(this, ENEMY_TEXTURE[kind]);
-    for (const e of this.sim.enemies) {
-      const tex = ENEMY_TEXTURE[e.kind];
-      const view: EnemyView = {
-        shadow: new IsoSprite(this, 'fx_shadow', e.pos, { depthBias: -0.5 }),
-        sprite: new IsoSprite(this, tex, e.pos),
-        facing: 'S',
-        lastPhase: e.phase,
-      };
-      view.sprite.play(punyAnimKey(tex, 'idle', 'S'));
-      this.enemyViews.set(e.id, view);
+    for (const kind of Object.keys(ENEMY_TEXTURE) as (keyof typeof ENEMY_TEXTURE)[]) {
+      if (kind === 'ceo') registerCeoAnims(this, ENEMY_TEXTURE[kind]);
+      else registerPunyAnims(this, ENEMY_TEXTURE[kind]);
     }
+    for (const e of this.sim.enemies) this.addEnemyView(e);
 
     this.telegraphs = this.add.graphics().setDepth(FLOOR_DEPTH + 2);
     this.hitBars = this.add.graphics().setDepth(OVERLAY_DEPTH - 1);
@@ -261,7 +257,7 @@ export class ExpeditionScene extends Phaser.Scene {
         const v = this.enemyViews.get(e.enemyId);
         if (v === undefined) break;
         v.sprite.setTintFill(0xffffff);
-        this.time.delayedCall(70, () => v.sprite.clearTint());
+        this.time.delayedCall(70, () => this.restoreTint(e.enemyId));
         this.floatText(v.sprite.x, v.sprite.y - 40, `-${e.amount}`, '#ffd080');
         break;
       }
@@ -270,7 +266,12 @@ export class ExpeditionScene extends Phaser.Scene {
         const v = this.enemyViews.get(e.enemyId);
         if (v === undefined) break;
         v.sprite.play(punyAnimKey(ENEMY_TEXTURE[e.kind], 'death', v.facing));
-        this.floatText(v.sprite.x, v.sprite.y - 54, this.killQuip(e.kind), '#9be37a');
+        this.floatText(v.sprite.x, v.sprite.y - 54, this.killQuip(e.kind), '#9be37a', e.kind === 'ceo' ? 2400 : 750);
+        if (e.kind === 'ceo') {
+          sfx(this, 'fanfare');
+          this.cameras.main.flash(400, 255, 220, 120);
+          this.cameras.main.shake(300, 0.01);
+        }
         this.tweens.add({ targets: [v.sprite, v.shadow], alpha: 0, delay: 500, duration: 380 });
         break;
       }
@@ -284,7 +285,29 @@ export class ExpeditionScene extends Phaser.Scene {
       case 'enemyStrike': {
         const v = this.enemyViews.get(e.enemyId);
         const en = this.sim.enemies.find((x) => x.id === e.enemyId);
-        if (v !== undefined && en !== undefined) v.sprite.play(punyAnimKey(ENEMY_TEXTURE[en.kind], 'sword', v.facing));
+        // CEO hrá kombo už počas nápriahu, ostatní až pri údere
+        if (v !== undefined && en !== undefined && en.kind !== 'ceo') v.sprite.play(punyAnimKey(ENEMY_TEXTURE[en.kind], 'sword', v.facing));
+        if (en?.kind === 'ceo') this.cameras.main.shake(120, 0.004);
+        break;
+      }
+      case 'summon': {
+        sfx(this, 'summon');
+        for (const id of e.spawned) {
+          const en = this.sim.enemies.find((x) => x.id === id);
+          if (en !== undefined) this.addEnemyView(en);
+        }
+        const v = this.enemyViews.get(e.enemyId);
+        if (v !== undefined) this.floatText(v.sprite.x, v.sprite.y - 80, this.summonQuip(), '#ffd080', 1600);
+        break;
+      }
+      case 'enraged': {
+        sfx(this, 'enrage');
+        this.cameras.main.shake(250, 0.008);
+        const v = this.enemyViews.get(e.enemyId);
+        if (v !== undefined) {
+          this.restoreTint(e.enemyId);
+          this.floatText(v.sprite.x, v.sprite.y - 80, 'Toto je NEPRIJATEĽNÉ! Reštrukturalizujem vás!', '#ff6b6b', 2200);
+        }
         break;
       }
       case 'playerDied':
@@ -360,19 +383,45 @@ export class ExpeditionScene extends Phaser.Scene {
         const b = worldToScreen(p);
         v.facing = facingFromScreen(b.x - a.x, b.y - a.y) ?? v.facing;
         v.sprite.play(punyAnimKey(tex, 'walk', v.facing), true);
+      } else if (e.phase === 'windup' && v.lastPhase !== 'windup' && e.kind === 'ceo') {
+        v.sprite.play(punyAnimKey(tex, 'sword', v.facing));
       } else if (e.phase === 'idle' || (e.phase === 'windup' && v.lastPhase !== 'windup')) {
         v.sprite.play(punyAnimKey(tex, 'idle', v.facing), true);
       }
       v.lastPhase = e.phase;
 
       if (e.phase === 'windup') this.drawTelegraph(e, 1 - Math.max(0, e.phaseMs) / def.windupMs);
-      if (e.hp < e.maxHp) {
+      // boss má veľký pruh v HUD
+      if (e.hp < e.maxHp && e.kind !== 'ceo') {
         const x = v.sprite.x - 12;
         const y = v.sprite.y - 40;
         this.hitBars.fillStyle(0x000000, 0.7).fillRect(x - 1, y - 1, 26, 4);
         this.hitBars.fillStyle(0xd03030, 1).fillRect(x, y, 24 * (e.hp / e.maxHp), 2);
       }
     }
+  }
+
+  private addEnemyView(e: EnemyState): void {
+    if (this.enemyViews.has(e.id)) return;
+    const tex = ENEMY_TEXTURE[e.kind];
+    const view: EnemyView = {
+      shadow: new IsoSprite(this, 'fx_shadow', e.pos, { depthBias: -0.5 }),
+      sprite: new IsoSprite(this, tex, e.pos),
+      facing: 'S',
+      lastPhase: e.phase,
+    };
+    if (e.kind === 'ceo') view.shadow.setScale(2);
+    view.sprite.play(punyAnimKey(tex, 'idle', 'S'));
+    this.enemyViews.set(e.id, view);
+  }
+
+  /** Po bliknutí zásahu: rozzúrený boss ostáva začervenaný. */
+  private restoreTint(enemyId: number): void {
+    const v = this.enemyViews.get(enemyId);
+    if (v === undefined) return;
+    const en = this.sim.enemies.find((x) => x.id === enemyId);
+    if (en?.enraged === true) v.sprite.setTint(0xff9a9a);
+    else v.sprite.clearTint();
   }
 
   private addDropView(dropId: number): void {
@@ -431,11 +480,18 @@ export class ExpeditionScene extends Phaser.Scene {
     this.tweens.add({ targets: t, y: y - 22, alpha: 0, duration: durationMs, onComplete: () => t.destroy() });
   }
 
+  private summonQuip(): string {
+    const quips = ['Zvolávam mimoriadnu poradu!', 'Audítori, ku mne!', 'Toto si vyžaduje pracovnú skupinu.', 'Delegujem!'];
+    return quips[Math.floor(Math.random() * quips.length)] ?? 'Porada!';
+  }
+
   private killQuip(kind: EnemyState['kind']): string {
     const quips =
       kind === 'auditor'
         ? ['Audit uzavretý.', 'Bez nálezu.', 'Zamietnuté.', 'Vybavené.']
-        : ['Smernica zrušená.', 'Nevyhovuje predpisom.', 'Compliance: zlyhal.'];
+        : kind === 'ceo'
+          ? ['CEO odstúpil „z osobných dôvodov“.', 'Zlatý padák sa neotvoril.', 'Predstavenstvo hľadá náhradu.']
+          : ['Smernica zrušená.', 'Nevyhovuje predpisom.', 'Compliance: zlyhal.'];
     return quips[Math.floor(Math.random() * quips.length)] ?? 'Vybavené.';
   }
 
@@ -449,6 +505,7 @@ export class ExpeditionScene extends Phaser.Scene {
       depth: this.sim.depth,
       rewards: { ...this.sim.rewards },
       kills: this.sim.kills,
+      bossKills: this.sim.bossKills,
       loot: [...this.sim.loot],
     };
     const { store } = session;

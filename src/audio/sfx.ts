@@ -5,7 +5,7 @@ import { session } from '@/state/session';
  * Zvukové efekty syntetizované vo Web Audio – žiadne súbory, žiadne licencie.
  * Krátke, suché „kancelárske“ zvuky: švih, ťuk, cinknutie.
  */
-export type SfxId = 'swing' | 'shot' | 'hit' | 'kill' | 'hurt' | 'pickup' | 'build' | 'click' | 'dash';
+export type SfxId = 'swing' | 'shot' | 'hit' | 'kill' | 'hurt' | 'pickup' | 'build' | 'click' | 'dash' | 'summon' | 'enrage' | 'fanfare';
 
 let noise: AudioBuffer | null = null;
 
@@ -86,6 +86,20 @@ export function sfx(scene: Phaser.Scene, id: SfxId): void {
       break;
     case 'dash':
       hiss(900, 0.12, 0.4);
+      break;
+    case 'summon':
+      // zvonček na poradu: ding-dong
+      tone('sine', 880, 880, 0, 0.18, 0.5);
+      tone('sine', 660, 660, 0.16, 0.26, 0.5);
+      break;
+    case 'enrage':
+      tone('sawtooth', 110, 70, 0, 0.45, 0.6);
+      hiss(500, 0.3, 0.4);
+      break;
+    case 'fanfare':
+      tone('triangle', 523, 523, 0, 0.12, 0.6);
+      tone('triangle', 659, 659, 0.12, 0.12, 0.6);
+      tone('triangle', 784, 784, 0.24, 0.3, 0.6);
       break;
   }
 }

@@ -11,13 +11,17 @@ Skript je deterministický – výstup sa dá kedykoľvek pregenerovať.
 """
 
 import argparse
+import io
+import json
 import shutil
+import zipfile
 from pathlib import Path
 
 from PIL import Image
 
 OUT = Path(__file__).resolve().parent.parent / "public" / "assets"
 MUSIC_SRC = Path(__file__).resolve().parent.parent / "assets-src" / "music"
+BUSINESSMAN_SRC = Path(__file__).resolve().parent.parent / "assets-src" / "businessman"
 
 TILE_W, TILE_H = 64, 32
 BLOCK = 64  # bunka bloku v Stone Soup sheetoch (64×64)
@@ -96,6 +100,40 @@ ENEMY_SHEETS = {"auditor": "Orc-Grunt", "compliance": "Orc-Soldier-Red"}
 SINNER_SHEETS = ["Human-Worker-Cyan", "Orc-Peon-Cyan", "Orc-Peon-Red", "Mage-Red"]
 
 
+# Boss „CEO“ z 8 Directional 2D Businessman (snímky 256×256, postava ~50×65 px pri spodku stredu).
+# Výrez spoločný pre všetky animácie (aj ležiacu smrť), päty na y = 135.
+CEO_CROP = (56, 70, 200, 166)  # 144×96
+CEO_COLUMNS = 16
+# smer dirN zo zdroja v poradí FACING hry (S, SE, E, NE, N, NW, W, SW)
+CEO_DIRS = [8, 7, 6, 5, 4, 3, 2, 1]
+# (animácia, krok podvzorkovania) – poradie a počty musia sedieť s `CEO_CLIPS` v src/entities/ceoAnims.ts
+CEO_ANIMS = [("Idle", 2), ("Walk", 1), ("Combo", 2), ("Damaged", 2), ("Die", 3)]
+
+
+def ceo_sheet() -> Image.Image:
+    """Jeden sheet: pre každý smer za sebou všetky snímky všetkých animácií, zalomené po CEO_COLUMNS."""
+    frames: list[Image.Image] = []
+    counts: dict[str, int] = {}
+    for d in CEO_DIRS:
+        for anim, step in CEO_ANIMS:
+            with zipfile.ZipFile(BUSINESSMAN_SRC / f"{anim}.zip") as z:
+                sheet = Image.open(io.BytesIO(z.read(f"{anim}/Businessman_{anim}_dir{d}.png"))).convert("RGBA")
+                meta = json.loads(z.read(f"{anim}/Businessman_{anim}_dir{d}.json"))
+            picked = meta["frames"][::step]
+            counts[anim] = len(picked)
+            for f in picked:
+                r = f["frame"]
+                x0, y0, x1, y1 = CEO_CROP
+                frames.append(sheet.crop((r["x"] + x0, r["y"] + y0, r["x"] + x1, r["y"] + y1)))
+    w, h = CEO_CROP[2] - CEO_CROP[0], CEO_CROP[3] - CEO_CROP[1]
+    rows = (len(frames) + CEO_COLUMNS - 1) // CEO_COLUMNS
+    out = Image.new("RGBA", (w * CEO_COLUMNS, h * rows), (0, 0, 0, 0))
+    for i, f in enumerate(frames):
+        out.paste(f, ((i % CEO_COLUMNS) * w, (i // CEO_COLUMNS) * h))
+    print("CEO snímky na smer:", counts)
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--soup", type=Path, required=True, help="rozbalený Isometric Stone Soup")
@@ -132,6 +170,8 @@ def main() -> None:
         full_blocks(soup / "Walls" / "Block" / f"ISS_Block_{wall}-64x64.png", 0).save(OUT / "tiles" / f"wall_{name}.png")
     for name, sheet in ENEMY_SHEETS.items():
         shutil.copy(puny / f"{sheet}.png", OUT / "sprites" / f"enemy_{name}.png")
+
+    ceo_sheet().save(OUT / "sprites" / "boss_ceo.png", optimize=True)
 
     shutil.copy(MUSIC_SRC / "Searching.ogg", OUT / "audio" / "music_base.ogg")
     shutil.copy(MUSIC_SRC / "Insistent.ogg", OUT / "audio" / "music_expedition.ogg")

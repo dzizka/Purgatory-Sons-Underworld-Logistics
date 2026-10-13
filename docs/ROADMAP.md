@@ -139,9 +139,22 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - [x] Bez kávy reťazec ide zhruba na polovicu (test)
 - [x] Staré savy sa zmigrujú bez straty (test v2 → v3)
 
+## Fáza 9 – Boss „CEO“ ✅
+**Cieľ:** hĺbka má míľniky – každé 5. poschodie končí súbojom s vedením.
+
+- Na každom 5. poschodí sedí **CEO** v najvzdialenejšej kancelárii (pri schodisku), bežných nepriateľov je tam o 40 % menej
+- Mechaniky: dlhý telegrafovaný úder s komboanimáciou, **porada** (každých 9 s privolá 2 audítorov, najviac 4 naraz), pod 50 % zdravia **rozzúrenie** (rýchlejší, kratší nápriah)
+- Privolaní audítori nenesú korisť (CEO sa nedá „farmiť“); CEO dá veľkú odmenu a predmet s vyšším šťastím
+- Veľký pruh zdravia v HUD, úvodný banner poschodia, vlastné zvuky (zvonček na poradu, rozzúrenie, fanfára)
+- Sprite z balíka 8 Directional 2D Businessman (CC0) – 8 smerov, 5 animácií, generuje `tools/import_assets.py`
+
+**Definition of Done**
+- [x] CEO je na poschodiach 5, 10, 15… práve raz a nikde inde (test na generátore)
+- [x] Porada rešpektuje strop posíl, rozzúrenie nastane raz, porážka sa započíta aj po zostupe (testy)
+- [x] Sprite sedí na mriežku manifestu (test assetov)
+
 ---
 
 ## Backlog (po MVP)
 - Nové typy hriešnikov a ich odomykanie
-- Boss „CEO“ na každom 5. poschodí (Businessman sprite v `assets-src/`)
 - Kancelársky nábytok v pixel arte (dnes polovičné kovové bloky)
