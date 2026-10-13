@@ -49,6 +49,12 @@ export interface Projectile {
   travelled: number;
 }
 
+/** Projektil nepriateľa (predvolanie právnika protistrany). */
+export interface EnemyProjectile extends Projectile {
+  readonly damage: number;
+  readonly range: number;
+}
+
 export type ExpeditionStatus = 'active' | 'won' | 'lost';
 
 export interface LootDrop {
@@ -69,6 +75,7 @@ export interface ExpeditionState {
   player: PlayerCombat;
   enemies: EnemyState[];
   projectiles: Projectile[];
+  enemyShots: EnemyProjectile[];
   nextId: number;
   kills: number;
   /** Porazení bossovia počas celej výpravy (cez všetky poschodia). */
@@ -111,6 +118,9 @@ export type ExpeditionEvent =
   | { readonly type: 'cleared' }
   | { readonly type: 'summon'; readonly enemyId: number; readonly spawned: readonly number[] }
   | { readonly type: 'enraged'; readonly enemyId: number }
+  | { readonly type: 'split'; readonly enemyId: number; readonly spawned: readonly number[] }
+  | { readonly type: 'enemyShot'; readonly enemyId: number; readonly projectileId: number }
+  | { readonly type: 'enemyShotGone'; readonly projectileId: number }
   | { readonly type: 'lootDropped'; readonly dropId: number }
   | { readonly type: 'lootPicked'; readonly dropId: number; readonly item: Item };
 
@@ -187,6 +197,7 @@ export function createExpedition(
     },
     enemies: [],
     projectiles: [],
+    enemyShots: [],
     nextId: 1,
     kills: carry?.kills ?? 0,
     bossKills: carry?.bossKills ?? 0,
@@ -339,6 +350,7 @@ export function stepExpedition(s: ExpeditionState, input: ExpeditionInput, dtMs:
 
   // --- nepriatelia ---
   for (const e of s.enemies) stepEnemy(s, e, dtMs, grid, ev);
+  stepEnemyShots(s, dt, grid, ev);
   separate(aliveEnemies(s), grid);
   s.enemies = s.enemies.filter((e) => e.phase !== 'dead' || e.phaseMs > 0);
 
@@ -369,6 +381,7 @@ function hitEnemy(s: ExpeditionState, e: EnemyState, amount: number, from: Vec2,
     gain(s.rewards, scaleAmounts(def.reward, s.scaling.reward));
     ev.push({ type: 'enemyKilled', enemyId: e.id, kind: e.kind });
     if (!e.minion && s.rng.chance(def.lootChance)) dropLoot(s, { x: e.pos.x, y: e.pos.y }, s.scaling.luck + (def.lootLuck ?? 0), ev);
+    if (def.splitInto !== undefined) split(s, e, def.splitInto, ev);
     return;
   }
   if (def.boss !== undefined && !e.enraged && e.hp <= e.maxHp * def.boss.enrageAt) {
@@ -381,6 +394,20 @@ function hitEnemy(s: ExpeditionState, e: EnemyState, amount: number, from: Vec2,
     e.phase = 'recover';
     e.phaseMs = def.recoverMs * 0.6;
   }
+}
+
+/** Sliz sa po smrti rozdelí – kúsky sa rozletia kolmo na smer úderu. */
+function split(s: ExpeditionState, e: EnemyState, into: NonNullable<EnemyDef['splitInto']>, ev: ExpeditionEvent[]): void {
+  const spawned: number[] = [];
+  const base = Math.atan2(e.knock.y, e.knock.x) + Math.PI / 2;
+  for (let i = 0; i < into.count; i++) {
+    const a = base + (i / into.count) * Math.PI * 2;
+    const child = spawnEnemy(s, into.kind, { x: e.pos.x + Math.cos(a) * 0.3, y: e.pos.y + Math.sin(a) * 0.3 }, false);
+    child.phase = 'chase';
+    child.invulnMs = 250; // ten istý švih ich hneď nezabije
+    spawned.push(child.id);
+  }
+  ev.push({ type: 'split', enemyId: e.id, spawned });
 }
 
 function dropLoot(s: ExpeditionState, pos: Vec2, luck: number, ev: ExpeditionEvent[]): void {
@@ -407,6 +434,10 @@ function stepEnemy(s: ExpeditionState, e: EnemyState, dtMs: number, grid: Collis
       if (d <= def.aggro) e.phase = 'chase';
       break;
     case 'chase': {
+      if (def.ranged !== undefined) {
+        rangedChase(s, e, def, def.ranged, d, dtMs, grid, ev);
+        break;
+      }
       if (d <= strikeRange) {
         const a = normalize({ x: p.pos.x - e.pos.x, y: p.pos.y - e.pos.y });
         e.aim.x = a.x;
@@ -425,6 +456,22 @@ function stepEnemy(s: ExpeditionState, e: EnemyState, dtMs: number, grid: Collis
     }
     case 'windup':
       if (e.phaseMs > 0) break;
+      if (def.ranged !== undefined) {
+        const id = s.nextId++;
+        const r = def.ranged;
+        s.enemyShots.push({
+          id,
+          pos: { x: e.pos.x + e.aim.x * (e.radius + 0.1), y: e.pos.y + e.aim.y * (e.radius + 0.1) },
+          vel: { x: e.aim.x * r.projectileSpeed, y: e.aim.y * r.projectileSpeed },
+          travelled: 0,
+          damage: Math.round(def.damage * s.scaling.enemyDamage),
+          range: r.projectileRange,
+        });
+        ev.push({ type: 'enemyShot', enemyId: e.id, projectileId: id });
+        e.phase = 'recover';
+        e.phaseMs = def.recoverMs;
+        break;
+      }
       {
         const inReach = d <= strikeRange + STRIKE_SLACK;
         const ahead = (p.pos.x - e.pos.x) * e.aim.x + (p.pos.y - e.pos.y) * e.aim.y > 0;
@@ -440,6 +487,54 @@ function stepEnemy(s: ExpeditionState, e: EnemyState, dtMs: number, grid: Collis
       if (e.phaseMs <= 0) e.phase = 'chase';
       break;
   }
+}
+
+/** Strelec: drží si odstup a keď je manažér na dostrel, zamieri (telegrafovaná čiara) a hodí predvolanie. */
+function rangedChase(
+  s: ExpeditionState,
+  e: EnemyState,
+  def: EnemyDef,
+  r: NonNullable<EnemyDef['ranged']>,
+  d: number,
+  dtMs: number,
+  grid: CollisionGrid,
+  ev: ExpeditionEvent[],
+): void {
+  const p = s.player;
+  const toward = normalize({ x: p.pos.x - e.pos.x, y: p.pos.y - e.pos.y });
+  if (d <= r.range && d >= r.preferMin * 0.5) {
+    e.aim.x = toward.x;
+    e.aim.y = toward.y;
+    e.phase = 'windup';
+    e.phaseMs = windupOf(def, e);
+    ev.push({ type: 'windup', enemyId: e.id });
+    return;
+  }
+  const sign = d < r.preferMin ? -1 : d > r.preferMax ? 1 : 0;
+  if (sign === 0) return;
+  const step = (speedOf(def, e) * dtMs) / 1000;
+  const next = moveWithCollision(grid, e.pos, { x: toward.x * step * sign, y: toward.y * step * sign }, e.radius);
+  e.pos.x = next.x;
+  e.pos.y = next.y;
+}
+
+/** Predvolania letia rovno; úskok (nezraniteľnosť) nimi prejde, stena ich zastaví. */
+function stepEnemyShots(s: ExpeditionState, dt: number, grid: CollisionGrid, ev: ExpeditionEvent[]): void {
+  const p = s.player;
+  s.enemyShots = s.enemyShots.filter((pr) => {
+    const step = { x: pr.vel.x * dt, y: pr.vel.y * dt };
+    pr.pos.x += step.x;
+    pr.pos.y += step.y;
+    pr.travelled += Math.hypot(step.x, step.y);
+    let hit = false;
+    if (distance(p.pos, pr.pos) < p.radius + 0.12) {
+      hit = applyHit(p, pr.damage, { x: pr.pos.x - pr.vel.x, y: pr.pos.y - pr.vel.y }, 2.5, PLAYER.hitInvulnMs);
+      if (hit) ev.push({ type: 'playerHit', amount: pr.damage });
+    }
+    const gone = hit || pr.travelled >= pr.range || grid.isBlocked(Math.round(pr.pos.x), Math.round(pr.pos.y));
+    if (gone) ev.push({ type: 'enemyShotGone', projectileId: pr.id });
+    return !gone;
+  });
 }
 
 /** Boss raz za čas zvolá poradu: okolo neho sa objavia posily (najviac `maxMinions` naraz). */

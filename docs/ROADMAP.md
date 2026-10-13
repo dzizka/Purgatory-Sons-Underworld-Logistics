@@ -167,6 +167,20 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - [x] Zamknutý typ sa nedá nabrať, odomknutie sa ohlási (testy)
 - [x] Staré savy sa zmigrujú (test v3 → v4)
 
+## Fáza 11 – Nové typy nepriateľov + vývojárske nástroje ✅
+**Cieľ:** hlbšie poschodia vyžadujú inú taktiku, nie len viac HP.
+
+- **Byrokratický sliz** (od 2. poschodia): pomalý, po smrti sa rozdelí na 2 rýchle **kópie** (bez koristi)
+- **Právnik protistrany** (od 3. poschodia): drží si odstup 3–5,5 dlaždice, telegrafuje čiarou a hádže **predvolania** – projektily, ktoré úskok prejde a stena zastaví
+- Podiel nových typov rastie s hĺbkou (`depthScaling`), v generátore znaky `s` a `r`
+- Sprity Puny Characters (Slime – vlastné animácie bez smerov, Soldier-Yellow)
+- **Cheat menu** (F9, iba dev / `?debug`): suroviny, odomknutie, úroveň 10, únava, predmety, offline, nesmrteľnosť, skok na poschodie, zabiť všetkých
+
+**Definition of Done**
+- [x] Sliz sa delí práve raz, poschodie sa vybaví až po kópiách (test)
+- [x] Právnik ustupuje, strieľa na dostrel; úskok aj stena projektil neprepustia k zraneniu (testy)
+- [x] Nové typy sa objavujú až od svojho poschodia (test generátora)
+
 ---
 
 ## Backlog (po MVP)

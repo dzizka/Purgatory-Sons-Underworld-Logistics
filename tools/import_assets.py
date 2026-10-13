@@ -94,7 +94,8 @@ BUILDING_BLOCKS = {
 }
 
 # nepriatelia na expedíciách
-ENEMY_SHEETS = {"auditor": "Orc-Grunt", "compliance": "Orc-Soldier-Red"}
+# slime: jeden riadok 15 snímok bez smerov (pozri src/entities/slimeAnims.ts)
+ENEMY_SHEETS = {"auditor": "Orc-Grunt", "compliance": "Orc-Soldier-Red", "counsel": "Soldier-Yellow", "slime": "Slime"}
 
 # vzhľady hriešnikov (index = SinnerState.look)
 # 0–3 úradníci, 4 stážista, 5 účtovník, 6 právnik, 7 barista (pozri src/data/sinnerKinds.ts)

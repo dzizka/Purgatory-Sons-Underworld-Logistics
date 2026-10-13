@@ -24,7 +24,7 @@ export interface GeneratedFloor {
   readonly depth: number;
 }
 
-const WALKABLE = new Set(['.', '@', 'X', 'v', 'L', 'a', 'c', 'B']);
+const WALKABLE = new Set(['.', '@', 'X', 'v', 'L', 'a', 'c', 's', 'r', 'B']);
 const MAX_ATTEMPTS = 12;
 
 const center = (r: Room): { x: number; y: number } => ({ x: Math.floor(r.x + r.w / 2), y: Math.floor(r.y + r.h / 2) });
@@ -237,7 +237,10 @@ function tryGenerate(rng: Rng, depth: number): { rows: string[]; rooms: Room[] }
     });
   for (const cell of rng.sample(candidates, enemyCount)) {
     if (c.get(cell.x, cell.y) !== '.') continue;
-    c.set(cell.x, cell.y, rng.chance(s.complianceShare) ? 'c' : 'a');
+    const roll = rng.next();
+    const kind =
+      roll < s.complianceShare ? 'c' : roll < s.complianceShare + s.slimeShare ? 's' : roll < s.complianceShare + s.slimeShare + s.counselShare ? 'r' : 'a';
+    c.set(cell.x, cell.y, kind);
   }
 
   // --- kontrola: všetko priechodné dosiahnuteľné, výťah aj schodisko viditeľné ---

@@ -168,6 +168,15 @@ export const ASSETS = {
   char_sinner_7: punySheet('assets/sprites/sinner_7.png', 0x4a7a2a),
   char_enemy_auditor: punySheet('assets/sprites/enemy_auditor.png', 0x5a8a3a),
   char_enemy_compliance: punySheet('assets/sprites/enemy_compliance.png', 0xa03030),
+  char_enemy_counsel: punySheet('assets/sprites/enemy_counsel.png', 0xc0a030),
+  /** Puny Slime: jeden riadok 15 snímok (bez smerov), postava sedí na y = 20. */
+  char_enemy_slime: {
+    url: 'assets/sprites/enemy_slime.png',
+    sheet: { frameWidth: 32, frameHeight: 32, frames: 15 },
+    origin: { x: 0.5, y: 20 / 32 },
+    scale: 2,
+    placeholder: { kind: 'capsule', width: 12, height: 9, fill: 0x4ab040, outline: 0x1a3a14 },
+  },
   /**
    * Boss CEO (8 Directional Businessman): 53 snímok na smer × 8 smerov, snímka 144×96, 16 stĺpcov
    * (27 riadkov = 432 buniek, posledných 8 prázdnych). Generuje `tools/import_assets.py`.
@@ -187,6 +196,8 @@ export const ASSETS = {
   /** Sponka zo sponkovačky – generovaná, je to pár pixelov. */
   /** Korisť na zemi – biely drahokam, farbu rarity dostane cez tint. */
   fx_loot: { origin: { x: 0.5, y: 0.5 }, placeholder: { kind: 'gem', size: 16 } },
+  /** Predvolanie, ktoré hádže právnik protistrany. */
+  fx_summons: { origin: { x: 0.5, y: 0.5 }, placeholder: { kind: 'rect', width: 8, height: 5, fill: 0xf0e6c8 } },
   fx_staple: { origin: { x: 0.5, y: 0.5 }, placeholder: { kind: 'rect', width: 7, height: 3, fill: 0xd8d8e0 } },
 } as const satisfies Record<string, AssetEntry>;
 
@@ -205,6 +216,9 @@ export const BUILDING_TEXTURE = {
 export const ENEMY_TEXTURE = {
   auditor: 'char_enemy_auditor',
   compliance: 'char_enemy_compliance',
+  slime: 'char_enemy_slime',
+  slimelet: 'char_enemy_slime',
+  counsel: 'char_enemy_counsel',
   ceo: 'char_boss_ceo',
 } as const satisfies Record<EnemyKind, AssetKey>;
 

@@ -11,6 +11,7 @@ import type { Resources } from '@/data/resources';
 import { type Item, RARITY } from '@/data/items';
 import { devFlags } from '@/dev/cheats';
 import { registerCeoAnims } from '@/entities/ceoAnims';
+import { registerSlimeAnims } from '@/entities/slimeAnims';
 import { punyAnimKey, registerPunyAnims, type PunyClip } from '@/entities/punyAnims';
 import type { BaseSceneData } from '@/scenes/BaseScene';
 import { session } from '@/state/session';
@@ -86,6 +87,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private attackClip: PunyClip = 'sword';
   private readonly enemyViews = new Map<number, EnemyView>();
   private readonly projectileViews = new Map<number, IsoSprite>();
+  private readonly enemyShotViews = new Map<number, IsoSprite>();
   private readonly dropViews = new Map<number, IsoSprite>();
   private telegraphs!: Phaser.GameObjects.Graphics;
   private hitBars!: Phaser.GameObjects.Graphics;
@@ -105,6 +107,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.hitStopMs = 0;
     this.enemyViews.clear();
     this.projectileViews.clear();
+    this.enemyShotViews.clear();
     this.dropViews.clear();
 
     const depth = data.depth ?? 1;
@@ -130,6 +133,7 @@ export class ExpeditionScene extends Phaser.Scene {
 
     for (const kind of Object.keys(ENEMY_TEXTURE) as (keyof typeof ENEMY_TEXTURE)[]) {
       if (kind === 'ceo') registerCeoAnims(this, ENEMY_TEXTURE[kind]);
+      else if (kind === 'slime' || kind === 'slimelet') registerSlimeAnims(this, ENEMY_TEXTURE[kind]);
       else registerPunyAnims(this, ENEMY_TEXTURE[kind]);
     }
     for (const e of this.sim.enemies) this.addEnemyView(e);
@@ -302,6 +306,33 @@ export class ExpeditionScene extends Phaser.Scene {
         if (v !== undefined) this.floatText(v.sprite.x, v.sprite.y - 80, this.summonQuip(), '#ffd080', 1600);
         break;
       }
+      case 'split': {
+        for (const id of e.spawned) {
+          const en = this.sim.enemies.find((x) => x.id === id);
+          if (en !== undefined) this.addEnemyView(en);
+        }
+        const v = this.enemyViews.get(e.enemyId);
+        if (v !== undefined) this.floatText(v.sprite.x, v.sprite.y - 40, 'Vyhotovené v dvoch kópiách!', '#9be37a', 1100);
+        break;
+      }
+      case 'enemyShot': {
+        sfx(this, 'shot');
+        const pr = this.sim.enemyShots.find((x) => x.id === e.projectileId);
+        const en = this.sim.enemies.find((x) => x.id === e.enemyId);
+        const v = this.enemyViews.get(e.enemyId);
+        if (v !== undefined && en !== undefined) v.sprite.play(punyAnimKey(ENEMY_TEXTURE[en.kind], 'throw', v.facing));
+        if (pr !== undefined) {
+          const shot = new IsoSprite(this, 'fx_summons', { x: pr.pos.x, y: pr.pos.y, z: PROJECTILE_Z });
+          const sv = worldToScreen(pr.vel);
+          shot.setRotation(Math.atan2(sv.y, sv.x));
+          this.enemyShotViews.set(pr.id, shot);
+        }
+        break;
+      }
+      case 'enemyShotGone':
+        this.enemyShotViews.get(e.projectileId)?.destroy();
+        this.enemyShotViews.delete(e.projectileId);
+        break;
       case 'enraged': {
         sfx(this, 'enrage');
         this.cameras.main.shake(250, 0.008);
@@ -413,6 +444,10 @@ export class ExpeditionScene extends Phaser.Scene {
       lastPhase: e.phase,
     };
     if (e.kind === 'ceo') view.shadow.setScale(2);
+    if (e.kind === 'slimelet') {
+      view.sprite.setScale(1.3);
+      view.shadow.setScale(0.6);
+    }
     view.sprite.play(punyAnimKey(tex, 'idle', 'S'));
     this.enemyViews.set(e.id, view);
   }
@@ -441,11 +476,18 @@ export class ExpeditionScene extends Phaser.Scene {
 
   private syncProjectiles(): void {
     for (const pr of this.sim.projectiles) this.projectileViews.get(pr.id)?.setWorld(pr.pos.x, pr.pos.y, PROJECTILE_Z);
+    for (const pr of this.sim.enemyShots) this.enemyShotViews.get(pr.id)?.setWorld(pr.pos.x, pr.pos.y, PROJECTILE_Z);
   }
 
-  /** Červený výsek na zemi: kam nepriateľ udrie. Plní sa, ako sa blíži úder. */
+  /** Červený výsek na zemi: kam nepriateľ udrie. Plní sa, ako sa blíži úder. Strelec: čiara, kam poletí predvolanie. */
   private drawTelegraph(e: EnemyState, t: number): void {
     const def = ENEMIES[e.kind];
+    if (def.ranged !== undefined) {
+      const a = worldToScreen(e.pos);
+      const b = worldToScreen({ x: e.pos.x + e.aim.x * def.ranged.projectileRange, y: e.pos.y + e.aim.y * def.ranged.projectileRange });
+      this.telegraphs.lineStyle(2 + 3 * t, 0xff2020, 0.15 + 0.45 * t).lineBetween(a.x, a.y, b.x, b.y);
+      return;
+    }
     const reach = e.radius + def.reach + PLAYER.radius;
     const pts = this.arcPoints(e.pos, e.aim, reach, Math.PI / 2.4);
     this.telegraphs.fillStyle(0xff2020, 0.12 + 0.35 * t).fillPoints(pts, true);
@@ -493,7 +535,11 @@ export class ExpeditionScene extends Phaser.Scene {
         ? ['Audit uzavretý.', 'Bez nálezu.', 'Zamietnuté.', 'Vybavené.']
         : kind === 'ceo'
           ? ['CEO odstúpil „z osobných dôvodov“.', 'Zlatý padák sa neotvoril.', 'Predstavenstvo hľadá náhradu.']
-          : ['Smernica zrušená.', 'Nevyhovuje predpisom.', 'Compliance: zlyhal.'];
+          : kind === 'slime' || kind === 'slimelet'
+            ? ['Skartované.', 'Archivované.', 'Odlepené.']
+            : kind === 'counsel'
+              ? ['Námietka zamietnutá.', 'Spor uzavretý mimosúdne.', 'Bez nároku na odvolanie.']
+              : ['Smernica zrušená.', 'Nevyhovuje predpisom.', 'Compliance: zlyhal.'];
     return quips[Math.floor(Math.random() * quips.length)] ?? 'Vybavené.';
   }
 

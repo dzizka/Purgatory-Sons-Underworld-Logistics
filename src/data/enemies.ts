@@ -1,6 +1,6 @@
 import type { ResourceAmounts } from '@/data/resources';
 
-export type EnemyKind = 'auditor' | 'compliance' | 'ceo';
+export type EnemyKind = 'auditor' | 'compliance' | 'slime' | 'slimelet' | 'counsel' | 'ceo';
 
 /** Schopnosti bossa navyše k bežnému nápriahu a úderu. */
 export interface BossDef {
@@ -41,6 +41,22 @@ export interface EnemyDef {
   /** Šťastie navyše pri jeho drope (boss = lepšia rarita). */
   readonly lootLuck?: number;
   readonly boss?: BossDef;
+  /** Útočí na diaľku: drží si odstup a hádže projektily (namiesto úderu). */
+  readonly ranged?: RangedDef;
+  /** Po smrti sa rozdelí na menšie kusy. */
+  readonly splitInto?: { readonly kind: EnemyKind; readonly count: number };
+}
+
+export interface RangedDef {
+  /** Bližšie ako toto ustupuje, ďalej ako `preferMax` sa približuje. */
+  readonly preferMin: number;
+  readonly preferMax: number;
+  /** Strieľa, len keď je manažér bližšie ako toto. */
+  readonly range: number;
+  /** dlaždice/s */
+  readonly projectileSpeed: number;
+  /** Ako ďaleko projektil doletí. */
+  readonly projectileRange: number;
 }
 
 export const ENEMIES: Readonly<Record<EnemyKind, EnemyDef>> = {
@@ -75,6 +91,56 @@ export const ENEMIES: Readonly<Record<EnemyKind, EnemyDef>> = {
     staggerable: false,
     reward: { souls: 2, forms: 3 },
     lootChance: 0.5,
+  },
+  slime: {
+    name: 'Byrokratický sliz',
+    flavor: 'Lepí sa na všetko. Po zásahu sa rozmnoží – v dvoch vyhotoveniach.',
+    maxHp: 45,
+    speed: 1.0,
+    radius: 0.32,
+    damage: 10,
+    reach: 0.4,
+    windupMs: 600,
+    recoverMs: 700,
+    aggro: 6,
+    knockbackTaken: 0.6,
+    staggerable: true,
+    reward: { souls: 1, forms: 1 },
+    lootChance: 0.15,
+    splitInto: { kind: 'slimelet', count: 2 },
+  },
+  slimelet: {
+    name: 'Kópia slizu',
+    flavor: 'Overená kópia. Rovnako lepkavá, menej trpezlivá.',
+    maxHp: 14,
+    speed: 1.7,
+    radius: 0.2,
+    damage: 6,
+    reach: 0.3,
+    windupMs: 420,
+    recoverMs: 500,
+    aggro: 8,
+    knockbackTaken: 1,
+    staggerable: true,
+    reward: { forms: 1 },
+    lootChance: 0,
+  },
+  counsel: {
+    name: 'Právnik protistrany',
+    flavor: 'Nikdy nepríde blízko. Hádže predvolania z bezpečnej vzdialenosti.',
+    maxHp: 35,
+    speed: 1.5,
+    radius: 0.3,
+    damage: 14,
+    reach: 0.4,
+    windupMs: 750,
+    recoverMs: 1100,
+    aggro: 8,
+    knockbackTaken: 1,
+    staggerable: true,
+    reward: { souls: 1, forms: 2 },
+    lootChance: 0.3,
+    ranged: { preferMin: 3, preferMax: 5.5, range: 7, projectileSpeed: 6, projectileRange: 8 },
   },
   ceo: {
     name: 'CEO',
