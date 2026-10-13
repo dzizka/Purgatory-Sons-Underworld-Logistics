@@ -1,3 +1,4 @@
+import type { EnemyKind } from '@/data/enemies';
 import type { BuildingType } from '@/data/buildings';
 import type { SinnerKind } from '@/data/sinnerKinds';
 import type { TraitId } from '@/data/traits';
@@ -106,3 +107,30 @@ export const OFFICE_EVENTS: readonly OfficeEvent[] = [
   { id: 'audit', notice: 'Šepká sa o audite. Všetci predstierajú, že pracujú.', who: ['Ja som tu vždy pracoval!', 'Skryte tie formuláre!', 'Audit? Aký audit?'] },
   { id: 'teambuilding', notice: 'Povinný teambuilding: pád dôvery. Nikto nechytil.', who: ['Au.', 'Dôverujem vám. Už nie.', 'Bolo to super. (nebolo)'] },
 ];
+
+// ---------------------------------------------------------------- expedícia
+
+/** Čo povie nepriateľ, keď si manažéra všimne. */
+export const ENEMY_BARKS: Readonly<Partial<Record<EnemyKind, readonly string[]>>> = {
+  auditor: ['Máte doklady?', 'Toto bude nález.', 'Zastavte! Kontrola!', 'Kde je pokladničný blok?'],
+  compliance: ['Porušujete smernicu 4.2!', 'Toto nie je v súlade!', 'Vyplňte tlačivo o vyplnení tlačiva!'],
+  slime: ['*blub*', '*mľask*', '*lepkavé zvuky*'],
+  slimelet: ['*blubík*'],
+  counsel: ['Uvidíme sa na súde!', 'Námietka!', 'Bez komentára. Teda, s komentárom: predvolanie!'],
+  ceo: ['Kto vás sem pustil? Bez mítingu?', 'Ste prepustený. Teda, budete.', 'Toto je nepriateľské prevzatie!'],
+};
+
+/** Manažér pri vstupe do miestnosti (prvýkrát na poschodí). */
+export const ROOM_COMMENTS: Readonly<Record<string, readonly string[]>> = {
+  archive: ['Archív. Tu umierajú sťažnosti.', 'Šanóny až do stropu. Do pekelného stropu.'],
+  meeting: ['Zasadačka. Porada, ktorá mohla byť e-mail.', 'Niekto tu nechal flipchart s pentagramom.'],
+  storage: ['Sklad. Vraj tu niečo zabudli.', 'Krabice. Možno je v nich benefit.'],
+  exit: ['Schodisko dolu. Samozrejme, že dolu.', 'Odtiaľto je to len horšie.'],
+  normal: ['Open space. Nikto tu nepracuje, ale všetci sú zaneprázdnení.', 'Ďalšia kancelária. Rovnaké kvetiny.'],
+};
+
+export const MANAGER_BARKS = {
+  lowHp: ['Potrebujem dovolenku!', 'Toto nie je v popise práce!', 'Kde je lekárnička? Aha, zrušili ju.'],
+  cleared: ['Poschodie vybavené. Kde je môj bonus?', 'Hotovo. Teraz už len výkaz.', 'Všetko vybavené. Mimo pracovnej doby.'],
+  legendary: ['Konečne nejaký benefit!', 'Toto si nechám. Účtovníctvo nemusí vedieť.'],
+} as const;

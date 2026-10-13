@@ -138,3 +138,23 @@ describe('hĺbka v simulácii', () => {
     expect(kill(5)).toBeGreaterThan(kill(1));
   });
 });
+
+describe('dekorácie a repliky v dungeone', () => {
+  it('poschodia majú kancelárske dekorácie a zostávajú priechodné', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const rows = generateFloor(seed, 3).rows;
+      expect(rows.join('').split('o').length - 1, `seed ${seed}`).toBeGreaterThan(0);
+      expect(parseMap(rows).props.some((p) => p.kind === 'decor')).toBe(true);
+    }
+  });
+
+  it('nepriateľ, ktorý si manažéra všimne, to ohlási (aggro) práve raz', async () => {
+    const { createExpedition, stepExpedition } = await import('@/systems/combat/expedition');
+    const grid = parseMap(['##########', '#........#', '#.@......#', '#........#', '##########']).grid;
+    const s = createExpedition({ x: 2, y: 2 }, [{ kind: 'counsel', tx: 6, ty: 2 }]);
+    const idle = { move: { x: 0, y: 0 }, aimAt: { x: 6, y: 2 }, melee: false, ranged: false, dash: false };
+    const ev = [];
+    for (let t = 0; t < 2000; t += 16) ev.push(...stepExpedition(s, idle, 16, grid));
+    expect(ev.filter((e) => e.type === 'aggro')).toHaveLength(1);
+  });
+});

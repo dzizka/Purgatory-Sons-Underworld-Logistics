@@ -113,6 +113,8 @@ export type ExpeditionEvent =
   | { readonly type: 'enemyHit'; readonly enemyId: number; readonly amount: number }
   | { readonly type: 'enemyKilled'; readonly enemyId: number; readonly kind: EnemyKind }
   | { readonly type: 'windup'; readonly enemyId: number }
+  /** Nepriateľ si manažéra prvýkrát všimol (pre repliky). */
+  | { readonly type: 'aggro'; readonly enemyId: number; readonly kind: EnemyKind }
   | { readonly type: 'enemyStrike'; readonly enemyId: number; readonly hit: boolean }
   | { readonly type: 'playerHit'; readonly amount: number }
   | { readonly type: 'playerDied' }
@@ -394,7 +396,10 @@ function hitEnemy(s: ExpeditionState, e: EnemyState, amount: number, from: Vec2,
     ev.push({ type: 'enraged', enemyId: e.id });
   }
   // zásah prebudí aj spiaceho audítora
-  if (e.phase === 'idle') e.phase = 'chase';
+  if (e.phase === 'idle') {
+    e.phase = 'chase';
+    ev.push({ type: 'aggro', enemyId: e.id, kind: e.kind });
+  }
   if (e.phase === 'windup' && def.staggerable) {
     e.phase = 'recover';
     e.phaseMs = def.recoverMs * 0.6;
@@ -436,7 +441,10 @@ function stepEnemy(s: ExpeditionState, e: EnemyState, dtMs: number, grid: Collis
 
   switch (e.phase) {
     case 'idle':
-      if (d <= def.aggro) e.phase = 'chase';
+      if (d <= def.aggro) {
+        e.phase = 'chase';
+        ev.push({ type: 'aggro', enemyId: e.id, kind: e.kind });
+      }
       break;
     case 'chase': {
       if (def.ranged !== undefined) {

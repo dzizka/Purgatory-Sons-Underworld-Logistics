@@ -239,6 +239,8 @@ export interface MapTheme {
   readonly wall: AssetKey;
   readonly pillar: AssetKey;
   readonly desk: AssetKey;
+  /** Drobné dekorácie (`o` v mape). */
+  readonly decor: AssetKey;
   readonly elevator: AssetKey;
   readonly stairs: AssetKey;
   /** Stmavenie podlahy, aby steny a postavy vynikli. */
@@ -251,6 +253,7 @@ export const THEMES = {
     wall: 'block_wall',
     pillar: 'block_pillar',
     desk: 'block_desk',
+    decor: 'deco_office',
     elevator: 'tile_elevator',
     stairs: 'tile_stairs',
     // parkety stmavené, aby postavy a nábytok vynikli (a aby to nevyzeralo ako IKEA)
@@ -261,6 +264,7 @@ export const THEMES = {
     wall: 'block_wall_red',
     pillar: 'block_pillar',
     desk: 'block_desk',
+    decor: 'deco_office',
     elevator: 'tile_elevator',
     stairs: 'tile_stairs',
     floorTint: 0x6e6e6e,
@@ -270,6 +274,7 @@ export const THEMES = {
     wall: 'block_wall_archive',
     pillar: 'block_wall',
     desk: 'block_desk',
+    decor: 'deco_office',
     elevator: 'tile_elevator',
     stairs: 'tile_stairs',
   },
@@ -278,6 +283,7 @@ export const THEMES = {
     wall: 'block_wall_it',
     pillar: 'block_pillar',
     desk: 'block_desk',
+    decor: 'deco_office',
     elevator: 'tile_elevator',
     stairs: 'tile_stairs',
   },
@@ -286,6 +292,7 @@ export const THEMES = {
     wall: 'block_wall_board',
     pillar: 'block_wall_archive',
     desk: 'block_desk',
+    decor: 'deco_office',
     elevator: 'tile_elevator',
     stairs: 'tile_stairs',
     floorTint: 0x9a9a9a,
