@@ -17,15 +17,15 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - [x] `npm run dev` spustí hru s HMR
 - [x] `npm run build` prejde bez chýb typov
 - [x] V prehliadači je vidieť izometrická mriežka, žiadne chyby v konzole
-- [ ] Push do `main` nasadí build na `https://dzizka.github.io/Purgatory-Sons-Underworld-Logistics/` *(vyžaduje Settings → Pages → Source: GitHub Actions)*
+- [x] Push do `main` nasadí build na `https://dzizka.github.io/Purgatory-Sons-Underworld-Logistics/`
 
 ---
 
-## Fáza 2 – Izometrický svet & pohyb
+## Fáza 2 – Izometrický svet & pohyb ✅
 **Cieľ:** Hráč (stredný manažér) chodí po mape.
 
 - `assets/manifest.ts` + `placeholders.ts` (fallback textúry, ak asset chýba)
-- Prvé CC0 assety (Kenney Isometric packs), zápis do `CREDITS.md`
+- Prvé CC0 assety (Kenney Isometric packs), zápis do `CREDITS.md` *(odložené – zatiaľ generované placeholdery; manifest je pripravený, stačí doplniť `url`)*
 - `IsoMap` – načítanie mapy (Tiled JSON alebo TS definícia), walkable grid, kolízie
 - `IsoSprite` – entita s world pozíciou, automatický depth každý frame
 - Pohyb WASD/šípky v izometrických smeroch (8-smerný), normalizácia diagonál
@@ -33,10 +33,10 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - Vitest + testy pre `iso.ts` (round-trip prevod, depth poradie)
 
 **Definition of Done**
-- [ ] Hráč sa pohybuje plynulo, nevojde do stien
-- [ ] Hráč správne zachádza „za“ a „pred“ objekty (stĺpy, stoly) – Y-sort overený
-- [ ] Chýbajúci asset nezhodí hru, zobrazí placeholder
-- [ ] Unit testy prechádzajú v CI
+- [x] Hráč sa pohybuje plynulo, nevojde do stien (šmýka sa popri nich)
+- [x] Hráč správne zachádza „za“ a „pred“ objekty (stĺpy, stoly) – Y-sort overený; bloky pred hráčom sa spriehľadnia
+- [x] Chýbajúci asset nezhodí hru, zobrazí placeholder
+- [x] Unit testy prechádzajú v CI
 
 ---
 

@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 
@@ -21,5 +22,9 @@ export default defineConfig(({ command, isPreview }) => ({
     assetsInlineLimit: 0, // pixel-art sprity nechceme inlinovať ako base64
     sourcemap: true,
     chunkSizeWarningLimit: 1600, // Phaser má ~1.2 MB, varovanie je očakávané
+  },
+  test: {
+    include: ['tests/**/*.test.ts'],
+    environment: 'node',
   },
 }));

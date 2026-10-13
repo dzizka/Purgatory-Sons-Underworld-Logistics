@@ -9,9 +9,16 @@ Izometrické 2D ARPG × manažment očistca. Si stredný manažér v Pekle: spra
 ```bash
 npm install
 npm run dev        # http://localhost:5173
+npm test           # unit testy (Vitest)
 npm run build      # typecheck + produkčný build do dist/
 npm run preview    # lokálny náhľad produkčného buildu
 ```
+
+## Ovládanie
+
+WASD / šípky – pohyb · koliesko myši – zoom · klik – inšpekcia dlaždice
+
+S `?debug` v URL je inštancia hry dostupná v konzole ako `window.__game`.
 
 ## Deploy
 

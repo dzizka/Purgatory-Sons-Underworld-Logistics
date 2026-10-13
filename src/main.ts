@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '@/config/constants';
+import { BaseScene } from '@/scenes/BaseScene';
 import { BootScene } from '@/scenes/BootScene';
+import { UIScene } from '@/scenes/UIScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO, // WebGL s fallbackom na Canvas
@@ -14,10 +16,21 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene],
+  scene: [BootScene, BaseScene, UIScene],
 };
 
 const game = new Phaser.Game(config);
+
+declare global {
+  interface Window {
+    __game?: Phaser.Game;
+  }
+}
+
+// Debug handle pre konzolu a smoke testy: v dev móde alebo s ?debug v URL.
+if (import.meta.env.DEV || new URLSearchParams(window.location.search).has('debug')) {
+  window.__game = game;
+}
 
 // HMR: pri hot-reloade zničíme starú inštanciu, inak by sa canvasy kopili.
 if (import.meta.hot) {
