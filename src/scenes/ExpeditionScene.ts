@@ -9,6 +9,7 @@ import { ENEMIES } from '@/data/enemies';
 import { PLAYER } from '@/data/player';
 import type { Resources } from '@/data/resources';
 import { type Item, RARITY } from '@/data/items';
+import { devFlags } from '@/dev/cheats';
 import { registerCeoAnims } from '@/entities/ceoAnims';
 import { punyAnimKey, registerPunyAnims, type PunyClip } from '@/entities/punyAnims';
 import type { BaseSceneData } from '@/scenes/BaseScene';
@@ -190,6 +191,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.hitStopMs -= dt;
       return;
     }
+    this.sim.godMode = devFlags.god;
     const events = stepExpedition(this.sim, this.readInput(), dt, this.grid);
     for (const e of events) this.handleEvent(e);
     this.attackAnimMs = Math.max(0, this.attackAnimMs - dt);

@@ -177,7 +177,8 @@ export class BaseScene extends Phaser.Scene {
     return this.elevatorTiles.has(`${Math.round(p.x)},${Math.round(p.y)}`);
   }
 
-  private depart(): void {
+  /** Odchod výťahom; `depth` > 1 iba z dev menu (skok rovno na hlbšie poschodie). */
+  depart(depth = 1): void {
     if (this.departing) return;
     this.departing = true;
     session.save();
@@ -187,7 +188,7 @@ export class BaseScene extends Phaser.Scene {
     this.cameras.main.fadeOut(300);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.scene.stop('UIScene');
-      this.scene.start('ExpeditionScene');
+      this.scene.start('ExpeditionScene', { depth });
     });
   }
 
