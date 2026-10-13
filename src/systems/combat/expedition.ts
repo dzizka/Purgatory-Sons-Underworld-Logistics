@@ -1,4 +1,4 @@
-import { CLEAR_BONUS, ENEMIES, type EnemyKind } from '@/data/enemies';
+import { CLEAR_BONUS, ENEMIES, type EnemyDef, type EnemyKind } from '@/data/enemies';
 import { PLAYER } from '@/data/player';
 import { depthScaling, type DepthScaling } from '@/data/dungeon';
 import { emptyResources, gain, type ResourceAmounts, type Resources } from '@/data/resources';
@@ -34,6 +34,12 @@ export interface EnemyState extends Fighter {
   phaseMs: number;
   /** Smer úderu zafixovaný na začiatku nápriahu. */
   aim: MutVec;
+  /** Boss: odpočet do ďalšej porady (privolania posíl). */
+  summonMs: number;
+  /** Boss pod prahom zdravia: rýchlejší a s kratším nápriahom. */
+  enraged: boolean;
+  /** Privolaný na poradu – nenesie korisť (inak by sa dal CEO „farmiť“). */
+  readonly minion: boolean;
 }
 
 export interface Projectile {
@@ -65,6 +71,8 @@ export interface ExpeditionState {
   projectiles: Projectile[];
   nextId: number;
   kills: number;
+  /** Porazení bossovia počas celej výpravy (cez všetky poschodia). */
+  bossKills: number;
   /** Odmeny, ktoré sa pripíšu základni pri návrate výťahom. Pri smrti prepadnú. */
   rewards: Resources;
   /** Korisť na zemi (prepadne, ak ju nikto nezdvihne). */
@@ -99,6 +107,8 @@ export type ExpeditionEvent =
   | { readonly type: 'playerDied' }
   | { readonly type: 'dash' }
   | { readonly type: 'cleared' }
+  | { readonly type: 'summon'; readonly enemyId: number; readonly spawned: readonly number[] }
+  | { readonly type: 'enraged'; readonly enemyId: number }
   | { readonly type: 'lootDropped'; readonly dropId: number }
   | { readonly type: 'lootPicked'; readonly dropId: number; readonly item: Item };
 
@@ -108,6 +118,7 @@ export interface ExpeditionCarry {
   readonly rewards: Resources;
   readonly loot: readonly Item[];
   readonly kills: number;
+  readonly bossKills?: number;
 }
 
 export interface ExpeditionOptions {
@@ -139,7 +150,7 @@ export function canDescend(s: ExpeditionState): boolean {
 
 /** Stav, ktorý sa prenesie na ďalšie poschodie. */
 export function carryOf(s: ExpeditionState): ExpeditionCarry {
-  return { hp: s.player.hp, rewards: { ...s.rewards }, loot: [...s.loot], kills: s.kills };
+  return { hp: s.player.hp, rewards: { ...s.rewards }, loot: [...s.loot], kills: s.kills, bossKills: s.bossKills };
 }
 
 export function createExpedition(
@@ -147,7 +158,6 @@ export function createExpedition(
   enemies: readonly { kind: EnemyKind; tx: number; ty: number }[],
   opts: ExpeditionOptions = {},
 ): ExpeditionState {
-  let nextId = 1;
   const loadout = opts.loadout ?? resolveLoadout({});
   const depth = Math.max(1, Math.floor(opts.depth ?? 1));
   const scaling = depthScaling(depth);
@@ -173,37 +183,59 @@ export function createExpedition(
       dashMs: 0,
       dashDir: { x: 0, y: 0 },
     },
-    enemies: enemies.map((e) => {
-      const def = ENEMIES[e.kind];
-      const hp = Math.round(def.maxHp * scaling.enemyHp);
-      return {
-        id: nextId++,
-        kind: e.kind,
-        pos: { x: e.tx, y: e.ty },
-        hp,
-        maxHp: hp,
-        radius: def.radius,
-        invulnMs: 0,
-        knock: { x: 0, y: 0 },
-        phase: 'idle',
-        phaseMs: 0,
-        aim: { x: 0, y: 1 },
-      };
-    }),
+    enemies: [],
     projectiles: [],
-    nextId,
+    nextId: 1,
     kills: carry?.kills ?? 0,
+    bossKills: carry?.bossKills ?? 0,
     rewards: carry ? { ...carry.rewards } : emptyResources(),
     cleared: enemies.length === 0,
     status: 'active',
     timeMs: 0,
   };
+  for (const e of enemies) spawnEnemy(s, e.kind, { x: e.tx, y: e.ty }, false);
   // sklad: korisť leží na zemi od začiatku (so šťastím navyše)
   for (const spot of opts.lootSpots ?? []) {
     const id = s.nextId++;
     s.drops.push({ id, item: generateItem(s.rng, `loot-${id}`, { luck: scaling.luck + 0.5 }), pos: { x: spot.tx, y: spot.ty } });
   }
   return s;
+}
+
+/** Pridá nepriateľa so zdravím podľa hĺbky. */
+function spawnEnemy(s: ExpeditionState, kind: EnemyKind, pos: Vec2, minion: boolean): EnemyState {
+  const def = ENEMIES[kind];
+  const hp = Math.round(def.maxHp * s.scaling.enemyHp);
+  const e: EnemyState = {
+    id: s.nextId++,
+    kind,
+    pos: { x: pos.x, y: pos.y },
+    hp,
+    maxHp: hp,
+    radius: def.radius,
+    invulnMs: 0,
+    knock: { x: 0, y: 0 },
+    phase: minion ? 'chase' : 'idle',
+    phaseMs: 0,
+    aim: { x: 0, y: 1 },
+    summonMs: (def.boss?.summonEveryMs ?? 0) / 2,
+    enraged: false,
+    minion,
+  };
+  s.enemies.push(e);
+  return e;
+}
+
+/** Rýchlosť a nápriah podľa toho, či je boss rozzúrený. */
+function speedOf(def: EnemyDef, e: EnemyState): number {
+  return def.speed * (e.enraged ? (def.boss?.enrageSpeedMult ?? 1) : 1);
+}
+function windupOf(def: EnemyDef, e: EnemyState): number {
+  return def.windupMs * (e.enraged ? (def.boss?.enrageWindupMult ?? 1) : 1);
+}
+
+export function bossOf(s: ExpeditionState): EnemyState | undefined {
+  return s.enemies.find((e) => ENEMIES[e.kind].boss !== undefined);
 }
 
 export function aliveEnemies(s: ExpeditionState): EnemyState[] {
@@ -329,10 +361,15 @@ function hitEnemy(s: ExpeditionState, e: EnemyState, amount: number, from: Vec2,
     e.phase = 'dead';
     e.phaseMs = CORPSE_MS;
     s.kills += 1;
+    if (def.boss !== undefined) s.bossKills += 1;
     gain(s.rewards, scaleAmounts(def.reward, s.scaling.reward));
     ev.push({ type: 'enemyKilled', enemyId: e.id, kind: e.kind });
-    if (s.rng.chance(def.lootChance)) dropLoot(s, { x: e.pos.x, y: e.pos.y }, s.scaling.luck, ev);
+    if (!e.minion && s.rng.chance(def.lootChance)) dropLoot(s, { x: e.pos.x, y: e.pos.y }, s.scaling.luck + (def.lootLuck ?? 0), ev);
     return;
+  }
+  if (def.boss !== undefined && !e.enraged && e.hp <= e.maxHp * def.boss.enrageAt) {
+    e.enraged = true;
+    ev.push({ type: 'enraged', enemyId: e.id });
   }
   // zásah prebudí aj spiaceho audítora
   if (e.phase === 'idle') e.phase = 'chase';
@@ -359,6 +396,8 @@ function stepEnemy(s: ExpeditionState, e: EnemyState, dtMs: number, grid: Collis
   const d = distance(e.pos, p.pos);
   const strikeRange = e.radius + def.reach + p.radius;
 
+  if (def.boss !== undefined && e.phase !== 'idle') summon(s, e, def, dtMs, grid, ev);
+
   switch (e.phase) {
     case 'idle':
       if (d <= def.aggro) e.phase = 'chase';
@@ -369,12 +408,12 @@ function stepEnemy(s: ExpeditionState, e: EnemyState, dtMs: number, grid: Collis
         e.aim.x = a.x;
         e.aim.y = a.y;
         e.phase = 'windup';
-        e.phaseMs = def.windupMs;
+        e.phaseMs = windupOf(def, e);
         ev.push({ type: 'windup', enemyId: e.id });
         break;
       }
       const dir = normalize({ x: p.pos.x - e.pos.x, y: p.pos.y - e.pos.y });
-      const step = (def.speed * dtMs) / 1000;
+      const step = (speedOf(def, e) * dtMs) / 1000;
       const next = moveWithCollision(grid, e.pos, { x: dir.x * step, y: dir.y * step }, e.radius);
       e.pos.x = next.x;
       e.pos.y = next.y;
@@ -397,6 +436,25 @@ function stepEnemy(s: ExpeditionState, e: EnemyState, dtMs: number, grid: Collis
       if (e.phaseMs <= 0) e.phase = 'chase';
       break;
   }
+}
+
+/** Boss raz za čas zvolá poradu: okolo neho sa objavia posily (najviac `maxMinions` naraz). */
+function summon(s: ExpeditionState, boss: EnemyState, def: EnemyDef, dtMs: number, grid: CollisionGrid, ev: ExpeditionEvent[]): void {
+  const b = def.boss;
+  if (b === undefined) return;
+  boss.summonMs -= dtMs;
+  if (boss.summonMs > 0) return;
+  boss.summonMs = b.summonEveryMs;
+  const alive = aliveEnemies(s).filter((e) => e.minion).length;
+  const count = Math.min(b.summonCount, b.maxMinions - alive);
+  const spawned: number[] = [];
+  for (let i = 0; i < 8 && spawned.length < count; i++) {
+    const a = (i / 8) * Math.PI * 2 + s.rng.next();
+    const pos = { x: boss.pos.x + Math.cos(a) * 1.2, y: boss.pos.y + Math.sin(a) * 1.2 };
+    if (grid.isBlocked(Math.round(pos.x), Math.round(pos.y))) continue;
+    spawned.push(spawnEnemy(s, b.summonKind, pos, true).id);
+  }
+  if (spawned.length > 0) ev.push({ type: 'summon', enemyId: boss.id, spawned });
 }
 
 /** Nepriatelia sa nestohujú do jedného bodu – jemne sa od seba odtláčajú. */

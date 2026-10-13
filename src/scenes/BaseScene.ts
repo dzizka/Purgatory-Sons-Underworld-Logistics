@@ -142,6 +142,9 @@ export class BaseScene extends Phaser.Scene {
         text: `Expedícia ukončená na poschodí ${outcome.depth}. Vybavené reklamácie: ${outcome.kills}. Odmena: ${formatAmounts(outcome.rewards)}.`,
         tone: 'info',
       });
+      if (outcome.bossKills > 0) {
+        events.emit('notice', { text: 'CEO porazený. Predstavenstvo už hľadá náhradu – o päť poschodí nižšie.', tone: 'info' });
+      }
       if (outcome.loot.length > 0) {
         const best = [...outcome.loot].sort((a, b) => RARITIES.indexOf(b.rarity) - RARITIES.indexOf(a.rarity))[0];
         const bestText = best === undefined ? '' : ` Najlepší: [${RARITY[best.rarity].name}] ${itemName(best)}.`;

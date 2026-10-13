@@ -9,7 +9,18 @@ const FLOORS: readonly { readonly name: string; readonly theme: FloorTheme }[] =
   { name: 'Kancelária vedenia', theme: 'board' },
 ];
 
+/** Na každom 5. poschodí sedí v najvzdialenejšej kancelárii CEO. */
+export const BOSS_EVERY = 5;
+
+export function isBossFloor(depth: number): boolean {
+  return depth >= BOSS_EVERY && depth % BOSS_EVERY === 0;
+}
+
+/** Na poschodí s bossom je bežných nepriateľov menej – zvyšok si CEO privolá sám. */
+export const BOSS_FLOOR_ENEMY_SHARE = 0.6;
+
 export function floorName(depth: number): string {
+  if (isBossFloor(depth)) return 'Kancelária CEO (dvere vždy zatvorené)';
   const f = FLOORS[depth - 1];
   return f !== undefined ? f.name : `Kancelária vedenia, suterén −${depth - FLOORS.length}`;
 }
