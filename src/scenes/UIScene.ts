@@ -4,7 +4,8 @@ import { BUILDING_TYPES, BUILDINGS, type BuildingType } from '@/data/buildings';
 import { canAfford, formatAmounts, RESOURCE_IDS, RESOURCE_INFO } from '@/data/resources';
 import { TRAITS } from '@/data/traits';
 import { InventoryPanel } from '@/ui/InventoryPanel';
-import { BASE_EVENTS, type TileInfo } from '@/scenes/BaseScene';
+import { sfx } from '@/audio/sfx';
+import { BASE_EVENTS, type BaseScene, type TileInfo } from '@/scenes/BaseScene';
 import type { SinnerState } from '@/state/GameState';
 import { session } from '@/state/session';
 import { HIRE_COST } from '@/state/store';
@@ -86,6 +87,14 @@ export class UIScene extends Phaser.Scene {
     this.subscribe();
     this.renderAll();
     this.time.addEvent({ delay: 200, loop: true, callback: () => this.renderInfo() });
+
+    // hlášky, ktoré prišli, kým HUD nebežal (návrat z expedície, offline progres, poškodený save)
+    session.hudActive = true;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      session.hudActive = false;
+    });
+    const pending = session.takePendingNotices();
+    pending.forEach((n, i) => this.time.delayedCall(300 + i * 900, () => this.toast(n.text, n.tone)));
   }
 
   // ---------- render ----------
@@ -164,7 +173,7 @@ export class UIScene extends Phaser.Scene {
       const d = BUILDINGS[type];
       const active = m.kind === 'build' && m.type === type;
       if (!session.store.isUnlocked(type)) {
-        text.setText(`[${i + 1}] ${d.name} (zamknuté)\n    ${d.unlock?.hint ?? ''}`).setColor(C.dim);
+        text.setText(`[${i + 1}] ${d.name}\n    zamknuté: ${d.unlock?.hint ?? ''}`).setColor(C.dim);
         return;
       }
       const color = active ? C.accent : canAfford(res, d.cost) ? C.text : C.dim;
@@ -179,7 +188,7 @@ export class UIScene extends Phaser.Scene {
         ? `STAVBA: ${BUILDINGS[m.type].name} – klikni na voľnú podlahu (Shift = viac), Esc/pravé tlačidlo zruší`
         : m.kind === 'assign'
           ? `PRIDELENIE: ${session.store.sinner(m.sinnerId)?.name ?? '?'} – klikni na budovu, Esc zruší`
-          : 'WASD pohyb · klik na budovu/hriešnika · 1–5 stavba · H nábor · I sklad · E výťah · M hudba';
+          : 'WASD pohyb · klik na budovu/hriešnika · 1–5 stavba · H nábor · I sklad · E výťah · M zvuk · Esc menu';
     this.modeText.setText(text).setColor(m.kind === 'idle' ? C.dim : C.accent);
   }
 
@@ -282,11 +291,23 @@ export class UIScene extends Phaser.Scene {
       else if (e.key === 'h' || e.key === 'H') this.hire();
       else if (e.key === 'u' || e.key === 'U') this.unassignSelected();
       else if (e.key === 'i' || e.key === 'I') this.inventory.toggle();
-      else if (e.key === 'Escape') {
-        session.resetMode();
-        session.selectBuilding(null);
-      }
+      else if (e.key === 'Escape') this.escape();
     });
+  }
+
+  /** Esc postupne: zavrie sklad → zruší režim/výber → menu. */
+  private escape(): void {
+    if (this.scene.isActive('TutorialScene')) return; // Esc tam znamená „preskočiť školenie“
+    if (this.inventory.isOpen) {
+      this.inventory.toggle();
+      return;
+    }
+    if (session.mode.kind !== 'idle' || session.selectedBuilding !== null) {
+      session.resetMode();
+      session.selectBuilding(null);
+      return;
+    }
+    (this.scene.get('BaseScene') as BaseScene).openMenu();
   }
 
   private subscribe(): void {
@@ -337,6 +358,7 @@ export class UIScene extends Phaser.Scene {
     obj.setInteractive({ useHandCursor: true });
     obj.on(Phaser.Input.Events.GAMEOBJECT_POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       session.uiPointerDownTime = p.downTime;
+      sfx(this, 'click');
       onClick();
     });
     return obj;

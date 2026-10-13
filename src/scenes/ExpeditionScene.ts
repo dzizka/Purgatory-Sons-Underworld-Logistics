@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
-import { AUDIO, ENEMY_TEXTURE, THEMES } from '@/assets/manifest';
+import { ENEMY_TEXTURE, THEMES } from '@/assets/manifest';
+import { playMusic, toggleMute } from '@/audio/music';
+import { sfx } from '@/audio/sfx';
 import { FLOOR_DEPTH } from '@/config/constants';
 import { screenToWorld, worldToScreen } from '@/core/iso';
 import { ENEMIES } from '@/data/enemies';
@@ -128,15 +130,9 @@ export class ExpeditionScene extends Phaser.Scene {
       (_p: Phaser.Input.Pointer, _o: unknown[], _dx: number, dy: number) =>
         cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), 0.9, 3)),
     );
-    this.input.keyboard?.on('keydown-M', () => {
-      this.sound.mute = !this.sound.mute;
-    });
+    this.input.keyboard?.on('keydown-M', () => toggleMute());
 
-    if (this.cache.audio.exists('music_expedition')) {
-      const music = this.sound.add('music_expedition', { loop: true, volume: AUDIO.music_expedition.volume });
-      music.play();
-      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => music.destroy());
-    }
+    playMusic(this, 'music_expedition');
     this.scene.launch('ExpeditionUIScene');
   }
 
@@ -186,11 +182,13 @@ export class ExpeditionScene extends Phaser.Scene {
   private handleEvent(e: ExpeditionEvent): void {
     switch (e.type) {
       case 'swing':
+        sfx(this, 'swing');
         this.attackClip = 'sword';
         this.attackAnimMs = 220;
         this.drawSwing(e.aim);
         break;
       case 'shot': {
+        sfx(this, 'shot');
         this.attackClip = 'throw';
         this.attackAnimMs = 180;
         const pr = this.sim.projectiles.find((p) => p.id === e.projectileId);
@@ -207,6 +205,7 @@ export class ExpeditionScene extends Phaser.Scene {
         this.projectileViews.delete(e.projectileId);
         break;
       case 'enemyHit': {
+        sfx(this, 'hit');
         this.hitStopMs = HIT_STOP_MS;
         const v = this.enemyViews.get(e.enemyId);
         if (v === undefined) break;
@@ -216,6 +215,7 @@ export class ExpeditionScene extends Phaser.Scene {
         break;
       }
       case 'enemyKilled': {
+        sfx(this, 'kill');
         const v = this.enemyViews.get(e.enemyId);
         if (v === undefined) break;
         v.sprite.play(punyAnimKey(ENEMY_TEXTURE[e.kind], 'death', v.facing));
@@ -224,6 +224,7 @@ export class ExpeditionScene extends Phaser.Scene {
         break;
       }
       case 'playerHit':
+        sfx(this, 'hurt');
         this.cameras.main.shake(140, 0.006);
         this.player.setTintFill(0xff4040);
         this.time.delayedCall(90, () => this.player.clearTint());
@@ -250,6 +251,7 @@ export class ExpeditionScene extends Phaser.Scene {
         break;
       }
       case 'lootPicked': {
+        sfx(this, 'pickup');
         this.dropViews.get(e.dropId)?.destroy();
         this.dropViews.delete(e.dropId);
         const r = RARITY[e.item.rarity];
@@ -257,6 +259,8 @@ export class ExpeditionScene extends Phaser.Scene {
         break;
       }
       case 'dash':
+        sfx(this, 'dash');
+        break;
       case 'windup':
         break;
     }
@@ -398,6 +402,7 @@ export class ExpeditionScene extends Phaser.Scene {
       store.addLoot(outcome.loot);
     }
     store.recordExpedition(won, outcome.kills);
+    session.save();
     this.events.emit('finished', outcome);
     this.time.delayedCall(won ? 400 : 2600, () => {
       this.cameras.main.fadeOut(350);

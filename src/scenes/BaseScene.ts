@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { AUDIO } from '@/assets/manifest';
+import { playMusic, toggleMute } from '@/audio/music';
+import { sfx } from '@/audio/sfx';
 import { FLOOR_DEPTH } from '@/config/constants';
 import { screenToWorld, worldToScreen } from '@/core/iso';
 import { BUILDINGS } from '@/data/buildings';
@@ -119,6 +120,7 @@ export class BaseScene extends Phaser.Scene {
     this.bindPointer();
     this.startMusic();
     this.scene.launch('UIScene');
+    if (!session.settings.tutorialDone) this.scene.launch('TutorialScene');
     this.cameras.main.fadeIn(250);
     const outcome = data.outcome;
     if (back && outcome !== undefined) this.time.delayedCall(400, () => this.reportReturn(outcome));
@@ -167,6 +169,7 @@ export class BaseScene extends Phaser.Scene {
   private depart(): void {
     if (this.departing) return;
     this.departing = true;
+    session.save();
     session.resetMode();
     session.selectBuilding(null);
     session.departureResources = { ...session.store.state.resources };
@@ -280,6 +283,7 @@ export class BaseScene extends Phaser.Scene {
       if (problem !== null) return notice(problem);
       const r = store.build(m.type, info.tx, info.ty);
       if (!r.ok) return notice(r.reason);
+      sfx(this, 'build');
       store.events.emit('notice', { text: `Stavba „${BUILDINGS[m.type].name}“ dokončená. Kolaudácia o 300 rokov.`, tone: 'info' });
       if (!shift) session.resetMode();
       session.selectBuilding(store.buildingAt(info.tx, info.ty)?.id ?? null);
@@ -302,12 +306,19 @@ export class BaseScene extends Phaser.Scene {
 
   private startMusic(): void {
     // Prehliadač pustí zvuk až po prvej interakcii – Phaser ho odomkne sám.
-    if (!this.cache.audio.exists('music_base')) return;
-    const music = this.sound.add('music_base', { loop: true, volume: AUDIO.music_base.volume });
-    music.play();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => music.destroy());
-    this.input.keyboard?.on('keydown-M', () => {
-      this.sound.mute = !this.sound.mute;
+    playMusic(this, 'music_base');
+    this.input.keyboard?.on('keydown-M', () => toggleMute());
+  }
+
+  /** Esc v kancelárii: uložiť a do menu. */
+  openMenu(): void {
+    if (this.departing || this.scene.isActive('TutorialScene')) return;
+    this.departing = true;
+    session.save();
+    this.cameras.main.fadeOut(200);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.stop('UIScene');
+      this.scene.start('MenuScene');
     });
   }
 

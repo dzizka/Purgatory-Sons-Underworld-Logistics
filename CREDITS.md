@@ -10,6 +10,8 @@ Surové balíky sú v `assets-src/` (nenasadzujú sa), herné súbory v `public/
 | `audio/music_base.ogg` („Searching“) | [OpenGameArt – Searching](https://opengameart.org/content/searching) | yd | CC0 1.0 |
 | `audio/music_expedition.ogg` („Insistent“) | [OpenGameArt – Insistent](https://opengameart.org/content/insistent-background-loop) | yd | CC0 1.0 |
 
+Zvukové efekty (švih, zásah, korisť, stavba…) sú syntetizované priamo v kóde (`src/audio/sfx.ts`, Web Audio) – nie sú to súbory a nevzťahuje sa na ne licencia tretích strán.
+
 Uložené v `assets-src/`, zatiaľ nepoužité:
 
 | Balík | Zdroj | Autor | Licencia |
