@@ -162,6 +162,10 @@ export const ASSETS = {
   char_sinner_1: punySheet('assets/sprites/sinner_1.png', 0x6a9a3a),
   char_sinner_2: punySheet('assets/sprites/sinner_2.png', 0x9a4a3a),
   char_sinner_3: punySheet('assets/sprites/sinner_3.png', 0xb53f4a),
+  char_sinner_4: punySheet('assets/sprites/sinner_4.png', 0xe0b090),
+  char_sinner_5: punySheet('assets/sprites/sinner_5.png', 0x2a8a8a),
+  char_sinner_6: punySheet('assets/sprites/sinner_6.png', 0x7a3a9a),
+  char_sinner_7: punySheet('assets/sprites/sinner_7.png', 0x4a7a2a),
   char_enemy_auditor: punySheet('assets/sprites/enemy_auditor.png', 0x5a8a3a),
   char_enemy_compliance: punySheet('assets/sprites/enemy_compliance.png', 0xa03030),
   /**
@@ -261,7 +265,17 @@ export const THEMES = {
   },
 } as const satisfies Record<'office' | FloorTheme, MapTheme>;
 
-export const SINNER_TEXTURES = ['char_sinner_0', 'char_sinner_1', 'char_sinner_2', 'char_sinner_3'] as const satisfies readonly AssetKey[];
+/** Index = `SinnerState.look`; ktoré vzhľady patria ktorému typu, určuje `SINNER_KIND_DEFS`. */
+export const SINNER_TEXTURES = [
+  'char_sinner_0',
+  'char_sinner_1',
+  'char_sinner_2',
+  'char_sinner_3',
+  'char_sinner_4',
+  'char_sinner_5',
+  'char_sinner_6',
+  'char_sinner_7',
+] as const satisfies readonly AssetKey[];
 
 export function assetEntry(key: AssetKey): AssetEntry {
   return ASSETS[key];

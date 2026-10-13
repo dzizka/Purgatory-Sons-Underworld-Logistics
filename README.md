@@ -24,7 +24,8 @@ npm run preview    # lokálny náhľad produkčného buildu
 | klik na hriešnika (vo svete alebo v Personálnom) → klik na budovu | pridelenie do práce |
 | U | poslať vybraného hriešnika do čakárne |
 | P / R | hriešnik na úrovni 10: povýšiť na vedúceho / poslať do dôchodku |
-| H | nábor nového hriešnika (3 duše) |
+| H | nábor nového hriešnika vybraného typu (úradník za 3 duše) |
+| T | prepnúť typ náboru (odomknuté typy) |
 | klik na budovu | detail: stav, recept, efektivita pracovníkov |
 | Esc / pravé tlačidlo | zrušiť režim |
 | M | zvuk on/off |
@@ -41,6 +42,8 @@ Nepriatelia pred úderom zastanú a pod nimi sa rozsvieti červený výsek – v
 
 **Ekonomika:** Podateľňa → Duše · Kávovar → Káva · Kopírka: Duša → 3 Formuláre · Mučiareň: Duša + 2 Formuláre + Káva → 6 Síry · Školiaca miestnosť: Káva → XP.
 Vlastnosti hriešnikov (Workoholik, Prokrastinátor, Mikromanažér, Introvert…) menia výkon; skúsenosti zvyšujú úroveň (+10 % / level, najviac úroveň 10).
+
+**Typy hriešnikov:** okrem úradníka sa postupom odomykajú **Stážista** (po 5 zabitiach – lacný, pomalší, učí sa 2×), **Barista** (po 3 výpravách – kávovar +80 %, pomalšie sa unavuje), **Účtovník** (po návrate z 3. poschodia – podateľňa a kopírka +50 %) a **Firemný právnik** (po porážke CEO – mučiareň +60 %, kolegovia +10 %). Vlastnosti sa k typom pridávajú náhodne.
 
 **Kariéra:** na úrovni 10 sa dá hriešnik **povýšiť na vedúceho** (sám nepracuje, budova +25 %) alebo poslať do **dôchodku** (zmizne, celá výroba trvalo +5 %, najviac +50 %) – alebo nech robí ďalej. Pracovníci sa unavujú a sami si berú kávu zo skladu; bez kávy **vyhoria** a robia na polovicu.
 

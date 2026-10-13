@@ -157,6 +157,25 @@ describe('migrácia v2 → v3', () => {
   });
 });
 
+describe('migrácia v3 → v4', () => {
+  it('save v3 bez typov: všetci sú úradníci a počítadlo CEO je 0', () => {
+    const state = createInitialState(9);
+    const { bossesDefeated: _b, ...progressV3 } = state.progress;
+    const v3 = { ...state, progress: progressV3, sinners: state.sinners.map(({ kind: _k, ...s }) => s) };
+    const r = parseSave(JSON.stringify({ saveVersion: 3, savedAt: 5, state: v3 }));
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.migratedFrom).toBe(3);
+    expect(r.save.state.progress.bossesDefeated).toBe(0);
+    expect(r.save.state.sinners.every((s) => s.kind === 'clerk')).toBe(true);
+  });
+
+  it('neznámy typ hriešnika sa odmietne', () => {
+    const state = createInitialState(10);
+    const bad = { ...state, sinners: state.sinners.map((s) => ({ ...s, kind: 'ceo' })) };
+    expect(parseSave(JSON.stringify({ saveVersion: 4, savedAt: 0, state: bad })).ok).toBe(false);
+  });
+});
+
 describe('úložisko', () => {
   it('bez savu = none; po zápise = ok', () => {
     const st = memoryStorage();

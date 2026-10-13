@@ -6,7 +6,7 @@ import { buildingRate, tickFatigue } from '@/systems/base/production';
 import { burnoutMult, levelFromXp, MAX_XP, pensionMult, sinnerEfficiency } from '@/systems/staff/sinners';
 
 function sinner(id: string, xp = 0, extra: Partial<SinnerState> = {}): SinnerState {
-  return { id, name: id, sin: '-', traits: [], look: 0, xp, role: 'worker', fatigue: 0, assignedTo: null, ...extra };
+  return { id, name: id, kind: 'clerk', sin: '-', traits: [], look: 0, xp, role: 'worker', fatigue: 0, assignedTo: null, ...extra };
 }
 
 function store(sinners: SinnerState[], coffee = 50): GameStore {
@@ -18,7 +18,7 @@ function store(sinners: SinnerState[], coffee = 50): GameStore {
     sinners,
     inventory: [],
     equipment: { melee: null, ranged: null, trinket: null },
-    progress: { expeditionsWon: 99, expeditionsLost: 0, kills: 999, deepestFloor: 0 },
+    progress: { expeditionsWon: 99, expeditionsLost: 0, kills: 999, deepestFloor: 0, bossesDefeated: 0 },
     retirees: [],
     rngSeed: 1,
     nextId: 100,

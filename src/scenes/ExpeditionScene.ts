@@ -513,7 +513,7 @@ export class ExpeditionScene extends Phaser.Scene {
       store.grant(outcome.rewards);
       store.addLoot(outcome.loot);
     }
-    store.recordExpedition(won, outcome.kills, outcome.depth);
+    store.recordExpedition(won, outcome.kills, outcome.depth, outcome.bossKills);
     session.save();
     this.events.emit('finished', outcome);
     this.time.delayedCall(won ? 400 : 2600, () => {

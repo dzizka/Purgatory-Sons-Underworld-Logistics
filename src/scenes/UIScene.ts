@@ -8,7 +8,7 @@ import { sfx } from '@/audio/sfx';
 import { BASE_EVENTS, type BaseScene, type TileInfo } from '@/scenes/BaseScene';
 import type { SinnerState } from '@/state/GameState';
 import { session } from '@/state/session';
-import { HIRE_COST } from '@/state/store';
+import { SINNER_KIND_DEFS, SINNER_KINDS } from '@/data/sinnerKinds';
 import { COFFEE_BREAK_AT, LEAD_BONUS, MAX_LEVEL, PENSION_BONUS } from '@/data/careers';
 import { buildingRate, leadOf, workersOf } from '@/systems/base/production';
 import { burnoutMult, isMaxLevel, levelFromXp, sinnerEfficiency, xpForLevel } from '@/systems/staff/sinners';
@@ -43,6 +43,8 @@ const ROW_H = 30;
 const MAX_ROWS = 10;
 
 const pct = (x: number): number => Math.round(x * 100);
+/** Riadok v Personálnom sa musí zmestiť do panelu (monospace 10 px ≈ 6 px na znak). */
+const fit = (text: string, max = 40): string => (text.length <= max ? text : `${text.slice(0, max - 1)}…`);
 
 /**
  * HUD overlay. Beží ako samostatná scéna s vlastnou kamerou, takže zoom
@@ -128,9 +130,10 @@ export class UIScene extends Phaser.Scene {
       const level = lvl >= MAX_LEVEL ? `Lv${lvl} MAX` : `Lv${lvl} (${Math.floor(s.xp)}/${xpForLevel(lvl + 1)})`;
       const line1 = `${selected ? '▶ ' : ''}${s.role === 'lead' ? 'VEDÚCI ' : ''}${s.name}  ${level}`;
       const tired = s.fatigue > COFFEE_BREAK_AT;
-      const detail = tired ? `únava ${pct(s.fatigue)} %` : s.traits.map((t) => TRAITS[t].name).join(', ');
+      const kind = s.kind === 'clerk' ? '' : `${SINNER_KIND_DEFS[s.kind].name}, `;
+      const detail = tired ? `únava ${pct(s.fatigue)} %` : `${kind}${s.traits.map((t) => TRAITS[t].name).join(', ')}`;
       const color = selected ? C.accent : tired ? C.bad : s.role === 'worker' && isMaxLevel(s) ? C.good : C.text;
-      const row = this.add.text(PANEL.x, y, `${line1}\n  ${where} · ${detail}`, this.style(10, color)).setLineSpacing(2);
+      const row = this.add.text(PANEL.x, y, `${fit(line1)}\n${fit(`  ${where} · ${detail}`)}`, this.style(10, color)).setLineSpacing(2);
       this.clickable(row, () => this.toggleAssign(s.id));
       row.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OVER, () => this.hoverText.setText(this.describeSinner(s)));
       this.staff.add(row);
@@ -147,7 +150,12 @@ export class UIScene extends Phaser.Scene {
       this.staff.add(t);
       by += 14;
     };
-    button(`[H] Prijať hriešnika (${formatAmounts(HIRE_COST)})`, canAfford(store.state.resources, HIRE_COST) ? C.good : C.dim, () => this.hire());
+    const hk = SINNER_KIND_DEFS[session.hireKind];
+    button(`[H] Prijať: ${hk.name} (${formatAmounts(hk.hireCost)})`, canAfford(store.state.resources, hk.hireCost) ? C.good : C.dim, () => this.hire());
+    const hireBtn = this.staff.list[this.staff.list.length - 1];
+    hireBtn?.on(Phaser.Input.Events.GAMEOBJECT_POINTER_OVER, () => this.hoverText.setText(`${hk.name}: ${hk.description}`));
+    const kinds = this.unlockedKinds();
+    if (kinds.length > 1) button(`[T] Typ náboru ▸ (${kinds.indexOf(session.hireKind) + 1}/${kinds.length})`, C.muted, () => this.cycleHireKind());
     button(`[I] Sklad a výbava (${store.state.inventory.length})`, C.muted, () => this.inventory.toggle());
     const chosen = m.kind === 'assign' ? store.sinner(m.sinnerId) : undefined;
     if (chosen !== undefined && chosen.assignedTo !== null) button('[U] Poslať do čakárne', C.muted, () => this.unassignSelected());
@@ -261,7 +269,8 @@ export class UIScene extends Phaser.Scene {
           ? 'Na strope. Vyberte ho a zvoľte [P] povýšenie alebo [R] dôchodok – alebo nech robí ďalej.'
           : `Únava ${pct(s.fatigue)} % – nad ${pct(COFFEE_BREAK_AT)} % si dá kávu zo skladu, bez nej vyhorí.`;
     const traits = s.traits.map((t) => `${TRAITS[t].name}: ${TRAITS[t].description}`).join('\n');
-    return `${s.name} – hriech: ${s.sin}. ${career}\n${traits}`;
+    const kind = SINNER_KIND_DEFS[s.kind];
+    return `${s.name} (${kind.name}) – hriech: ${s.sin}. ${career}\n${kind.name}: ${kind.description}\n${traits}`;
   }
 
   /** Krátka hláška hore v strede; najviac 3 naraz, najnovšia hore. */
@@ -274,7 +283,12 @@ export class UIScene extends Phaser.Scene {
       .setWordWrapWidth(440);
     this.toasts.unshift(t);
     this.toasts.splice(3).forEach((old) => old.destroy());
-    this.toasts.forEach((o, i) => o.setY(118 + i * 26));
+    // dlhé hlášky sa zalomia na dva riadky – ukladáme podľa skutočnej výšky, nie pevného kroku
+    let y = 118;
+    for (const o of this.toasts) {
+      o.setY(y);
+      y += o.height + 4;
+    }
     this.tweens.add({
       targets: t,
       alpha: 0,
@@ -305,8 +319,21 @@ export class UIScene extends Phaser.Scene {
   }
 
   private hire(): void {
-    const r = session.store.hire();
+    const r = session.store.hire(session.hireKind);
     if (!r.ok) this.toast(r.reason, 'warn');
+  }
+
+  private unlockedKinds(): (typeof SINNER_KINDS)[number][] {
+    return SINNER_KINDS.filter((k) => session.store.isKindUnlocked(k));
+  }
+
+  private cycleHireKind(): void {
+    const kinds = this.unlockedKinds();
+    const next = kinds[(kinds.indexOf(session.hireKind) + 1) % kinds.length] ?? 'clerk';
+    session.hireKind = next;
+    const d = SINNER_KIND_DEFS[next];
+    this.hoverText.setText(`${d.name}: ${d.description}`);
+    this.renderStaff();
   }
 
   private promoteSelected(): void {
@@ -342,6 +369,7 @@ export class UIScene extends Phaser.Scene {
       else if (e.key === 'u' || e.key === 'U') this.unassignSelected();
       else if (e.key === 'p' || e.key === 'P') this.promoteSelected();
       else if (e.key === 'r' || e.key === 'R') this.retireSelected();
+      else if (e.key === 't' || e.key === 'T') this.cycleHireKind();
       else if (e.key === 'i' || e.key === 'I') this.inventory.toggle();
       else if (e.key === 'Escape') this.escape();
     });
@@ -385,6 +413,7 @@ export class UIScene extends Phaser.Scene {
       }),
       store.events.on('inventoryChanged', () => this.renderStaff()),
       store.events.on('buildingUnlocked', () => this.renderBuildBar()),
+      store.events.on('kindUnlocked', () => this.renderStaff()),
       store.events.on('notice', (n) => this.toast(n.text, n.tone)),
       ui.on('modeChanged', () => {
         this.renderMode();

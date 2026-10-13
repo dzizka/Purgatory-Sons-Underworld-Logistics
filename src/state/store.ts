@@ -5,11 +5,13 @@ import { BASE_ITEMS, INVENTORY_LIMIT, type Item, RARITY } from '@/data/items';
 import { canAfford, formatAmounts, gain, spend, type ResourceAmounts, type Resources } from '@/data/resources';
 import type { BuildingState, GameState, SinnerState } from '@/state/GameState';
 import { MAX_LEVEL, PENSION_BONUS, PENSION_MAX } from '@/data/careers';
+import { SINNER_KIND_DEFS, SINNER_KINDS, type SinnerKind } from '@/data/sinnerKinds';
 import { leadOf, tickBase, workersOf } from '@/systems/base/production';
 import { itemName, type Loadout, resolveLoadout } from '@/systems/loot/loot';
 import { generateSinner, isMaxLevel, levelFromXp } from '@/systems/staff/sinners';
 
-export const HIRE_COST = { souls: 3 } as const;
+/** Cena náboru úradníka (základný typ). */
+export const HIRE_COST = SINNER_KIND_DEFS.clerk.hireCost;
 /** Koľko mien si dôchodkový fond pamätá (bonus sa počíta len do `PENSION_MAX`). */
 const RETIREES_KEPT = 100;
 
@@ -26,6 +28,7 @@ export interface GameEvents {
   notice: { text: string; tone: 'info' | 'warn' };
   inventoryChanged: null;
   buildingUnlocked: BuildingType;
+  kindUnlocked: SinnerKind;
 }
 
 export type Result = { ok: true } | { ok: false; reason: string };
@@ -44,7 +47,7 @@ export function createInitialState(seed: number): GameState {
       { id: 'i-start-ranged', base: 'stapler', rarity: 'common', affixes: [] },
     ],
     equipment: { melee: 'i-start-melee', ranged: 'i-start-ranged', trinket: null },
-    progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0, deepestFloor: 0 },
+    progress: { expeditionsWon: 0, expeditionsLost: 0, kills: 0, deepestFloor: 0, bossesDefeated: 0 },
     retirees: [],
     rngSeed: seed >>> 0,
     nextId: 1,
@@ -211,11 +214,13 @@ export class GameStore {
   }
 
   /** Zapíše výsledok expedície a ohlási nové odomknuté budovy. */
-  recordExpedition(won: boolean, kills: number, depth = 1): void {
+  recordExpedition(won: boolean, kills: number, depth = 1, bossKills = 0): void {
     const before = BUILDING_TYPES.filter((t) => this.isUnlocked(t));
+    const kindsBefore = SINNER_KINDS.filter((k) => this.isKindUnlocked(k));
     const p = this.state.progress;
     if (won) {
       p.expeditionsWon += 1;
+      p.bossesDefeated += bossKills;
       if (depth > p.deepestFloor) {
         p.deepestFloor = depth;
         if (depth > 1) this.events.emit('notice', { text: `Nový rekord: poschodie ${depth}. Vedenie o vás vie. To nie je dobre.`, tone: 'info' });
@@ -227,6 +232,23 @@ export class GameStore {
       this.events.emit('buildingUnlocked', t);
       this.events.emit('notice', { text: `Odomknuté: ${BUILDINGS[t].name}. Vedenie schválilo rozpočet.`, tone: 'info' });
     }
+    for (const k of SINNER_KINDS) {
+      if (kindsBefore.includes(k) || !this.isKindUnlocked(k)) continue;
+      this.events.emit('kindUnlocked', k);
+      this.events.emit('notice', { text: `HR môže nabrať nový typ: ${SINNER_KIND_DEFS[k].name}. [T] v Personálnom prepne typ náboru.`, tone: 'info' });
+    }
+  }
+
+  isKindUnlocked(kind: SinnerKind): boolean {
+    const u = SINNER_KIND_DEFS[kind].unlock;
+    if (u === undefined) return true;
+    const p = this.state.progress;
+    return (
+      p.kills >= (u.kills ?? 0) &&
+      p.expeditionsWon >= (u.expeditionsWon ?? 0) &&
+      p.deepestFloor >= (u.deepestFloor ?? 0) &&
+      p.bossesDefeated >= (u.bossesDefeated ?? 0)
+    );
   }
 
   /** Pripíše suroviny (napr. odmeny z expedície). */
@@ -250,18 +272,20 @@ export class GameStore {
     return { ok: true };
   }
 
-  hire(): Result {
-    if (!canAfford(this.state.resources, HIRE_COST)) {
-      return fail(`Na nábor treba ${formatAmounts(HIRE_COST)}. HR bez duší nepracuje.`);
+  hire(kind: SinnerKind = 'clerk'): Result {
+    const def = SINNER_KIND_DEFS[kind];
+    if (!this.isKindUnlocked(kind)) return fail(`${def.name} je zatiaľ mimo rozpočtu HR: ${def.unlock?.hint ?? '?'}.`);
+    if (!canAfford(this.state.resources, def.hireCost)) {
+      return fail(`Na nábor (${def.name}) treba ${formatAmounts(def.hireCost)}. HR bez duší nepracuje.`);
     }
-    spend(this.state.resources, HIRE_COST);
+    spend(this.state.resources, def.hireCost);
     const rng = new Rng(this.state.rngSeed);
-    const s = generateSinner(rng, `s${this.state.nextId++}`);
+    const s = generateSinner(rng, `s${this.state.nextId++}`, kind);
     this.state.rngSeed = rng.seed;
     this.state.sinners.push(s);
     this.events.emit('sinnerHired', s);
     this.events.emit('resourcesChanged', this.state.resources);
-    this.events.emit('notice', { text: `Nový zamestnanec: ${s.name} (hriech: ${s.sin.toLowerCase()})`, tone: 'info' });
+    this.events.emit('notice', { text: `Nový zamestnanec: ${s.name}, ${def.name.toLowerCase()} (hriech: ${s.sin.toLowerCase()})`, tone: 'info' });
     return { ok: true };
   }
 

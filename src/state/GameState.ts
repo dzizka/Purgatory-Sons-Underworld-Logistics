@@ -1,5 +1,6 @@
 import type { BuildingType } from '@/data/buildings';
 import type { SinnerRole } from '@/data/careers';
+import type { SinnerKind } from '@/data/sinnerKinds';
 import type { Item, ItemSlot } from '@/data/items';
 import type { Resources } from '@/data/resources';
 import type { TraitId } from '@/data/traits';
@@ -39,6 +40,8 @@ export interface BuildingState {
 export interface SinnerState {
   readonly id: string;
   readonly name: string;
+  /** Typ (úradník, stážista, barista…) – určuje cenu, vzhľad a špecializáciu. */
+  readonly kind: SinnerKind;
   readonly sin: string;
   readonly traits: readonly TraitId[];
   /** Index vzhľadu (sprite sheet). */
@@ -57,4 +60,6 @@ export interface ProgressState {
   kills: number;
   /** Najhlbšie poschodie, z ktorého sa manažér vrátil živý (0 = ešte nikdy). */
   deepestFloor: number;
+  /** Koľkokrát sa manažér vrátil živý po porážke CEO. */
+  bossesDefeated: number;
 }

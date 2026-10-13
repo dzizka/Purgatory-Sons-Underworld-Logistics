@@ -2,7 +2,7 @@ import { BUILDINGS } from '@/data/buildings';
 import { COFFEE_BREAK_AT, FATIGUE_MS, LEAD_BONUS, RECOVER_MS } from '@/data/careers';
 import { canAfford, gain, spend, type ResourceAmounts } from '@/data/resources';
 import type { BuildingState, GameState, SinnerState } from '@/state/GameState';
-import { levelFromXp, MAX_XP, pensionMult, sinnerEfficiency, xpMultiplier } from '@/systems/staff/sinners';
+import { fatigueMultiplier, levelFromXp, MAX_XP, pensionMult, sinnerEfficiency, xpMultiplier } from '@/systems/staff/sinners';
 
 /** XP za každý dokončený cyklus pre každého pracovníka. */
 export const WORK_XP = 5;
@@ -60,7 +60,7 @@ export function tickFatigue(state: GameState, dtMs: number): FatigueResult {
       continue;
     }
     const before = s.fatigue;
-    s.fatigue = Math.min(1, s.fatigue + dtMs / FATIGUE_MS);
+    s.fatigue = Math.min(1, s.fatigue + (dtMs / FATIGUE_MS) * fatigueMultiplier(s));
     if (s.fatigue >= COFFEE_BREAK_AT && state.resources.coffee >= 1) {
       state.resources.coffee -= 1;
       s.fatigue = 0;
