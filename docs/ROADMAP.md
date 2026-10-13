@@ -217,6 +217,16 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - [x] Udalosti sa neopakujú dvakrát po sebe a vyžadujú svoju budovu (test)
 - [x] Dekorácie neblokujú výťah, spawn ani miesta v čakárni (test)
 
+## Fáza 15 – Živšie dungeony ✅
+- **Kancelárske dekorácie** v miestnostiach poschodí (`o` v ASCII mape, prekážka): kvetiny, koše, chladničky, televízory, gauče – pri zadných stenách, priechodnosť overuje generátor
+- **Repliky nepriateľov**, keď si manažéra všimnú („Máte doklady?“, „Námietka!“, „*blub*“, CEO vždy); nový event `aggro`
+- **Manažér komentuje** prvý vstup do miestnosti (archív, zasadačka, sklad, schodisko…), nízke zdravie, vybavené poschodie a legendárnu korisť
+- **Papiere sa rozletia** pri každom zásahu a zabití (pri CEO poriadne)
+
+**Definition of Done**
+- [x] Každé poschodie má dekorácie a zostáva priechodné (test na 40 seedoch + existujúce testy na 600 poschodiach)
+- [x] Aggro sa ohlási raz za nepriateľa (test)
+
 ---
 
 ## Backlog (po MVP)

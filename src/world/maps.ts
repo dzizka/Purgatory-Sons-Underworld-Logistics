@@ -1,6 +1,6 @@
 /**
  * Ručne kreslené mapy. Riadok = world y, stĺpec = world x.
- * `.` podlaha · `#` stena · `P` stĺp · `D` stôl · `@` spawn · `X` výťah · `v` schodisko · `L` korisť
+ * `.` podlaha · `#` stena · `P` stĺp · `D` stôl · `o` dekorácia · `@` spawn · `X` výťah · `v` schodisko · `L` korisť
  * `a` audítor · `c` compliance officer · medzera = prázdno
  * Expedičné poschodia generuje `systems/dungeon/generate.ts` v rovnakom formáte.
  */

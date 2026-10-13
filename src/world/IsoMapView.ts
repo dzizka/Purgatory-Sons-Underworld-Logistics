@@ -16,7 +16,12 @@ export class IsoMapView {
 
   constructor(scene: Phaser.Scene, map: ParsedMap, theme: MapTheme = THEMES.office) {
     const { grid } = map;
-    const propTexture: Readonly<Record<PropPlacement['kind'], AssetKey>> = { wall: theme.wall, pillar: theme.pillar, desk: theme.desk };
+    const propTexture: Readonly<Record<PropPlacement['kind'], AssetKey>> = {
+      wall: theme.wall,
+      pillar: theme.pillar,
+      desk: theme.desk,
+      decor: theme.decor,
+    };
     const floorVariants = variantCount(theme.floor);
     for (let ty = 0; ty < grid.height; ty++) {
       for (let tx = 0; tx < grid.width; tx++) {

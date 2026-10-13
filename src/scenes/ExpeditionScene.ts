@@ -27,7 +27,9 @@ import {
   leaveExpedition,
   stepExpedition,
 } from '@/systems/combat/expedition';
-import { generateFloor } from '@/systems/dungeon/generate';
+import { generateFloor, type Room } from '@/systems/dungeon/generate';
+import { ENEMY_BARKS, MANAGER_BARKS, ROOM_COMMENTS } from '@/data/chatter';
+import { SpeechBubble } from '@/world/SpeechBubble';
 import { facingFromScreen, type Facing } from '@/systems/movement/direction';
 import type { Vec2 } from '@/systems/movement/movement';
 import { IsoMapView } from '@/world/IsoMapView';
@@ -98,6 +100,10 @@ export class ExpeditionScene extends Phaser.Scene {
   private finished = false;
   private stairsTiles = new Set<string>();
   private floorSeed = 0;
+  private bubbles = new Map<string, SpeechBubble>();
+  private rooms: readonly Room[] = [];
+  private visitedRooms = new Set<Room>();
+  private lowHpSaid = false;
 
   constructor() {
     super({ key: 'ExpeditionScene' });
@@ -114,6 +120,10 @@ export class ExpeditionScene extends Phaser.Scene {
     const depth = data.depth ?? 1;
     this.floorSeed = data.seed ?? Math.floor(Math.random() * 2 ** 32);
     const floor = generateFloor(this.floorSeed, depth);
+    this.bubbles = new Map();
+    this.rooms = floor.rooms;
+    this.visitedRooms = new Set(floor.rooms.filter((r) => r.kind === 'start'));
+    this.lowHpSaid = false;
     const map = parseMap(floor.rows);
     this.grid = map.grid;
     this.elevatorTiles = new Set(map.elevators.map((e) => `${e.tx},${e.ty}`));
@@ -205,6 +215,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.syncProjectiles();
     this.syncDrops();
     this.view.fadeOccluders(this.player);
+    this.updateBubbles();
 
     if (!this.finished && this.sim.status === 'active' && Phaser.Input.Keyboard.JustDown(this.keys.use)) {
       if (this.onElevator) {
@@ -266,6 +277,7 @@ export class ExpeditionScene extends Phaser.Scene {
         v.sprite.setTintFill(0xffffff);
         this.time.delayedCall(70, () => this.restoreTint(e.enemyId));
         this.floatText(v.sprite.x, v.sprite.y - 40, `-${e.amount}`, '#ffd080');
+        this.paperBurst(v.sprite.x, v.sprite.y - 16, 3);
         break;
       }
       case 'enemyKilled': {
@@ -280,6 +292,7 @@ export class ExpeditionScene extends Phaser.Scene {
           this.cameras.main.shake(300, 0.01);
         }
         this.tweens.add({ targets: [v.sprite, v.shadow], alpha: 0, delay: 500, duration: 380 });
+        this.paperBurst(v.sprite.x, v.sprite.y - 16, e.kind === 'ceo' ? 24 : 8);
         break;
       }
       case 'playerHit':
@@ -288,6 +301,10 @@ export class ExpeditionScene extends Phaser.Scene {
         this.player.setTintFill(0xff4040);
         this.time.delayedCall(90, () => this.player.clearTint());
         this.floatText(this.player.x, this.player.y - 44, `-${e.amount}`, '#ff6b6b');
+        if (!this.lowHpSaid && this.sim.player.hp < this.sim.player.maxHp * 0.3) {
+          this.lowHpSaid = true;
+          this.bark('manager', this.player, this.pick(MANAGER_BARKS.lowHp), true);
+        }
         break;
       case 'enemyStrike': {
         const v = this.enemyViews.get(e.enemyId);
@@ -350,7 +367,17 @@ export class ExpeditionScene extends Phaser.Scene {
         break;
       case 'cleared':
         this.cameras.main.flash(250, 120, 200, 120);
+        this.time.delayedCall(500, () => this.bark('manager', this.player, this.pick(MANAGER_BARKS.cleared), true));
         break;
+      case 'aggro': {
+        const v = this.enemyViews.get(e.enemyId);
+        const lines = ENEMY_BARKS[e.kind];
+        // nie každý hneď rečuje – inak by bol dungeon ako porada
+        if (v !== undefined && lines !== undefined && (e.kind === 'ceo' || Math.random() < 0.45)) {
+          this.bark(`e${e.enemyId}`, v.sprite, this.pick(lines), e.kind === 'ceo');
+        }
+        break;
+      }
       case 'lootDropped':
         this.addDropView(e.dropId);
         break;
@@ -360,6 +387,9 @@ export class ExpeditionScene extends Phaser.Scene {
         this.dropViews.delete(e.dropId);
         const r = RARITY[e.item.rarity];
         this.floatText(this.player.x, this.player.y - 58, `[${r.name}] ${itemName(e.item)}`, r.color, 1600);
+        if (e.item.rarity === 'legendary' || e.item.rarity === 'cursed') {
+          this.time.delayedCall(900, () => this.bark('manager', this.player, this.pick(MANAGER_BARKS.legendary), true));
+        }
         break;
       }
       case 'dash':
@@ -432,6 +462,61 @@ export class ExpeditionScene extends Phaser.Scene {
         this.hitBars.fillStyle(0x000000, 0.7).fillRect(x - 1, y - 1, 26, 4);
         this.hitBars.fillStyle(0xd03030, 1).fillRect(x, y, 24 * (e.hp / e.maxHp), 2);
       }
+    }
+  }
+
+  // ---------- repliky a efekty ----------
+
+  private pick<T>(items: readonly T[]): T {
+    const item = items[Math.floor(Math.random() * items.length)];
+    if (item === undefined) throw new Error('pick: prázdny zoznam');
+    return item;
+  }
+
+  /** Bublina nad postavou; najviac 2 naraz (okrem dôležitých). */
+  private bark(id: string, target: { readonly x: number; readonly y: number; readonly active?: boolean }, text: string, force = false): void {
+    const old = this.bubbles.get(id);
+    if (old !== undefined) old.dismiss();
+    else if (!force && this.bubbles.size >= 2) return;
+    this.bubbles.set(id, new SpeechBubble(this, target, text, { lift: id === 'manager' ? 50 : 46 }));
+  }
+
+  private updateBubbles(): void {
+    for (const [id, b] of this.bubbles) {
+      b.follow();
+      if (b.finished) this.bubbles.delete(id);
+    }
+    // vstup do novej miestnosti → manažér okomentuje
+    const p = this.sim.player.pos;
+    for (const r of this.rooms) {
+      if (this.visitedRooms.has(r)) continue;
+      if (p.x < r.x + 1 || p.x > r.x + r.w - 2 || p.y < r.y + 1 || p.y > r.y + r.h - 2) continue;
+      this.visitedRooms.add(r);
+      const lines = ROOM_COMMENTS[r.kind];
+      if (lines !== undefined && Math.random() < 0.6) this.bark('manager', this.player, this.pick(lines));
+    }
+  }
+
+  /** Pri zásahu sa rozletia papiere (formuláre, sťažnosti, výpovede). */
+  private paperBurst(x: number, y: number, count: number): void {
+    for (let i = 0; i < count; i++) {
+      const sheet = this.add
+        .image(x, y, 'fx_summons')
+        .setDepth(OVERLAY_DEPTH - 3)
+        .setScale(0.6 + Math.random() * 0.5)
+        .setRotation(Math.random() * Math.PI);
+      const a = Math.random() * Math.PI * 2;
+      const dist = 14 + Math.random() * 22;
+      this.tweens.add({
+        targets: sheet,
+        x: x + Math.cos(a) * dist,
+        y: y + Math.sin(a) * dist * 0.6 + 10,
+        rotation: sheet.rotation + (Math.random() - 0.5) * 6,
+        alpha: 0,
+        duration: 500 + Math.random() * 400,
+        ease: 'Quad.Out',
+        onComplete: () => sheet.destroy(),
+      });
     }
   }
 

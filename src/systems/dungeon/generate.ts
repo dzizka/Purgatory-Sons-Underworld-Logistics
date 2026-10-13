@@ -139,6 +139,11 @@ function decorate(c: Canvas, rng: Rng, r: Room, depth: number): void {
     case 'exit':
       break;
   }
+  // kancelárske drobnosti (kvetiny, koše, chladnička, gauč…) pri zadných stenách – kancelária, nie kobka
+  if (r.kind !== 'archive' && r.kind !== 'meeting') {
+    const back = interior(r).filter((p) => (p.x === r.x + 2 || p.y === r.y + 2) && c.get(p.x, p.y) === '.');
+    for (const p of rng.sample(back, rng.int(1, 2))) c.set(p.x, p.y, 'o');
+  }
 }
 
 function tryGenerate(rng: Rng, depth: number): { rows: string[]; rooms: Room[] } | null {

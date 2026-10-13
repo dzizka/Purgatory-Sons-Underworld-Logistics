@@ -3,7 +3,7 @@
  * Dlaždica (tx, ty) pokrýva world štvorec [tx - 0.5, tx + 0.5] × [ty - 0.5, ty + 0.5].
  */
 
-export type TileKind = 'floor' | 'wall' | 'pillar' | 'desk' | 'elevator' | 'stairs' | 'void';
+export type TileKind = 'floor' | 'wall' | 'pillar' | 'desk' | 'decor' | 'elevator' | 'stairs' | 'void';
 
 export interface PropPlacement {
   readonly kind: Exclude<TileKind, 'floor' | 'elevator' | 'stairs' | 'void'>;
@@ -31,6 +31,7 @@ const LEGEND: Readonly<Record<string, TileKind>> = {
   '#': 'wall',
   P: 'pillar',
   D: 'desk',
+  o: 'decor',
   X: 'elevator',
   v: 'stairs',
   L: 'floor',
@@ -44,7 +45,7 @@ const LEGEND: Readonly<Record<string, TileKind>> = {
 
 const ENEMY_CHARS: Readonly<Record<string, EnemySpawnKind>> = { a: 'auditor', c: 'compliance', s: 'slime', r: 'counsel', B: 'ceo' };
 
-const BLOCKING: ReadonlySet<TileKind> = new Set<TileKind>(['wall', 'pillar', 'desk', 'void']);
+const BLOCKING: ReadonlySet<TileKind> = new Set<TileKind>(['wall', 'pillar', 'desk', 'decor', 'void']);
 
 export class TileGrid {
   constructor(
@@ -87,7 +88,7 @@ export function tileVariant(tx: number, ty: number, variants: number): number {
 
 /**
  * ASCII mapa → grid. Riadok = world y, stĺpec = world x.
- * `.` podlaha, `#` stena, `P` stĺp, `D` stôl, `@` spawn, `X` výťah, `v` schodisko dole, `L` korisť,
+ * `.` podlaha, `#` stena, `P` stĺp, `D` stôl, `o` dekorácia (kvetina, kôš, chladnička…), `@` spawn, `X` výťah, `v` schodisko dole, `L` korisť,
  * `a` / `c` / `s` / `r` nepriateľ (audítor / compliance officer / sliz / právnik) na podlahe, `B` boss CEO, medzera = prázdno.
  */
 export function parseMap(rows: readonly string[]): ParsedMap {
@@ -114,7 +115,7 @@ export function parseMap(rows: readonly string[]): ParsedMap {
       if (ch === 'L') lootSpots.push({ tx, ty });
       const enemy = ENEMY_CHARS[ch];
       if (enemy !== undefined) enemies.push({ kind: enemy, tx, ty });
-      if (kind === 'wall' || kind === 'pillar' || kind === 'desk') props.push({ kind, tx, ty });
+      if (kind === 'wall' || kind === 'pillar' || kind === 'desk' || kind === 'decor') props.push({ kind, tx, ty });
     }
   }
 

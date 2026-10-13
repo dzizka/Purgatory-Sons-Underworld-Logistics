@@ -21,6 +21,7 @@ const TILE_LABEL: Readonly<Record<TileKind, string>> = {
   wall: 'Nosná stena (nosí hlavne výčitky)',
   pillar: 'Blok pekelného kameňa – firemné hodnoty',
   desk: 'Pracovný stôl, model „Večný Open-space“',
+  decor: 'Dekorácia. Jediná vec, ktorú tu nikto nehodnotí.',
   elevator: 'Služobný výťah do Oddelenia reklamácií (E = nastúpiť)',
   stairs: 'Schodisko',
   void: 'Nič',
