@@ -55,8 +55,11 @@ WorldY = (ScreenY / (TH/2) - ScreenX / (TW/2)) / 2
 ├── docs/
 │   ├── ARCHITECTURE.md           # tento dokument
 │   └── ROADMAP.md                # míľniky + Definition of Done
+├── assets-src/                   # surové CC0 balíky (nenasadzujú sa)
+├── tools/
+│   └── import_assets.py          # assets-src → public/assets (výrez, priehľadnosť)
 ├── public/
-│   └── assets/                   # statické CC0 assety (kopírujú sa 1:1 do dist)
+│   └── assets/                   # spracované CC0 assety (kopírujú sa 1:1 do dist)
 │       ├── sprites/              #   postavy, nepriatelia, NPC (sprite sheety / atlasy)
 │       ├── tiles/                #   izometrické dlaždice, budovy
 │       ├── ui/                   #   panely, ikony, fonty (bitmap)

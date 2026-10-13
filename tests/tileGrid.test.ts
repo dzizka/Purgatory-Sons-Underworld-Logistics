@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseMap, TileGrid } from '@/world/TileGrid';
+import { parseMap, TileGrid, tileVariant } from '@/world/TileGrid';
 
 const MAP = ['####', '#@P#', '#.D#', '####'];
 
@@ -44,5 +44,26 @@ describe('TileGrid', () => {
 
   it('tileAt zaokrúhľuje na stred dlaždice', () => {
     expect(TileGrid.tileAt(1.49, 2.51)).toEqual({ tx: 1, ty: 3 });
+  });
+});
+
+describe('tileVariant', () => {
+  it('je deterministický a v rozsahu', () => {
+    for (let i = 0; i < 200; i++) {
+      const v = tileVariant(i % 17, Math.floor(i / 17), 4);
+      expect(v).toBe(tileVariant(i % 17, Math.floor(i / 17), 4));
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThan(4);
+    }
+  });
+
+  it('použije všetky varianty (žiadna viditeľná šachovnica)', () => {
+    const seen = new Set<number>();
+    for (let x = 0; x < 10; x++) for (let y = 0; y < 10; y++) seen.add(tileVariant(x, y, 4));
+    expect(seen.size).toBe(4);
+  });
+
+  it('jeden variant = vždy 0', () => {
+    expect(tileVariant(5, 9, 1)).toBe(0);
   });
 });

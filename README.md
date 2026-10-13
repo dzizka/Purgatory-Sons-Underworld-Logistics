@@ -16,7 +16,7 @@ npm run preview    # lokálny náhľad produkčného buildu
 
 ## Ovládanie
 
-WASD / šípky – pohyb · koliesko myši – zoom · klik – inšpekcia dlaždice
+WASD / šípky – pohyb · koliesko myši – zoom · klik – inšpekcia dlaždice · M – hudba on/off
 
 S `?debug` v URL je inštancia hry dostupná v konzole ako `window.__game`.
 

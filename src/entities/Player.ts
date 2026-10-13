@@ -1,6 +1,8 @@
 import type Phaser from 'phaser';
-import { IsoSprite } from '@/world/IsoSprite';
+import { punyAnimKey, registerPunyAnims } from '@/entities/punyAnims';
+import { facingFromScreen, type Facing } from '@/systems/movement/direction';
 import { inputToWorldVelocity, moveWithCollision, type CollisionGrid, type Vec2 } from '@/systems/movement/movement';
+import { IsoSprite } from '@/world/IsoSprite';
 
 /** Rýchlosť v obrazovkových pixeloch za sekundu. */
 const SPEED_PX = 150;
@@ -11,14 +13,17 @@ const RADIUS = 0.28;
 export class Player {
   readonly sprite: IsoSprite;
   private readonly shadow: IsoSprite;
+  private facing: Facing = 'S';
 
   constructor(
     scene: Phaser.Scene,
     private readonly grid: CollisionGrid,
     spawn: Vec2,
   ) {
-    this.shadow = new IsoSprite(scene, 'fx_shadow', spawn, -0.5);
+    registerPunyAnims(scene, 'char_player');
+    this.shadow = new IsoSprite(scene, 'fx_shadow', spawn, { depthBias: -0.5 });
     this.sprite = new IsoSprite(scene, 'char_player', spawn);
+    this.sprite.play(punyAnimKey('char_player', 'idle', this.facing));
   }
 
   get position(): Vec2 {
@@ -27,12 +32,18 @@ export class Player {
 
   /** @param dir smer v obrazovkových osiach (-1..1), napr. z klávesnice */
   update(dtMs: number, dir: Vec2): void {
+    const facing = facingFromScreen(dir.x, dir.y);
+    if (facing === null) {
+      this.sprite.play(punyAnimKey('char_player', 'idle', this.facing), true);
+      return;
+    }
+    this.facing = facing;
+    this.sprite.play(punyAnimKey('char_player', 'walk', facing), true);
+
     const vel = inputToWorldVelocity(dir.x, dir.y, SPEED_PX);
-    if (vel.x === 0 && vel.y === 0) return;
     const dt = Math.min(dtMs, 100) / 1000; // pri zaseknutí tabu nechceme teleport
     const next = moveWithCollision(this.grid, this.position, { x: vel.x * dt, y: vel.y * dt }, RADIUS);
     this.sprite.setWorld(next.x, next.y);
     this.shadow.setWorld(next.x, next.y);
-    if (dir.x !== 0) this.sprite.setFlipX(dir.x < 0);
   }
 }

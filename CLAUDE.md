@@ -11,4 +11,5 @@
 - `src/core/` a `src/systems/` **nesmú importovať Phaser** (stráži `tests/architecture.test.ts`).
 - World súradnice sú v dlaždiciach; obrazovkovú pozíciu a hĺbku počíta `IsoSprite` – nenastavuj ich ručne.
 - Assety len cez `src/assets/manifest.ts`; každý nový CC0 asset zapíš do `CREDITS.md`.
+- Surové balíky patria do `assets-src/`, do `public/assets/` iba spracované súbory, ktoré hra reálne používa (všetko v `public/` sa nasadzuje). Spracovanie: `tools/import_assets.py`.
 - Texty v hre po slovensky, cynický korporátny humor.

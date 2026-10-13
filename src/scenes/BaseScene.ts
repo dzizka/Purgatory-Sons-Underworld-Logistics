@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { AUDIO } from '@/assets/manifest';
 import { FLOOR_DEPTH } from '@/config/constants';
 import { screenToWorld, worldToScreen } from '@/core/iso';
 import { Player } from '@/entities/Player';
@@ -58,6 +59,18 @@ export class BaseScene extends Phaser.Scene {
 
     this.keys = this.createKeys();
     this.bindPointer();
+    this.startMusic();
+  }
+
+  private startMusic(): void {
+    // Prehliadač pustí zvuk až po prvej interakcii – Phaser ho odomkne sám.
+    if (!this.cache.audio.exists('music_base')) return;
+    const music = this.sound.add('music_base', { loop: true, volume: AUDIO.music_base.volume });
+    music.play();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => music.destroy());
+    this.input.keyboard?.on('keydown-M', () => {
+      this.sound.mute = !this.sound.mute;
+    });
   }
 
   override update(_time: number, delta: number): void {

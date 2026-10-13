@@ -27,7 +27,7 @@ export class UIScene extends Phaser.Scene {
     this.add.text(16, 16, 'PURGATORY & LOGISTICS\nOddelenie spracovania duší', style);
     this.hoverText = this.add.text(16, 60, '', { ...style, fontSize: '12px', color: '#c9a0a8' });
     this.selectText = this.add.text(16, 78, '', { ...style, fontSize: '12px', color: '#c9a0a8' });
-    this.add.text(16, this.scale.height - 28, 'WASD / šípky – pohyb · koliesko – zoom · klik – inšpekcia dlaždice', {
+    this.add.text(16, this.scale.height - 28, 'WASD / šípky – pohyb · koliesko – zoom · klik – inšpekcia · M – hudba', {
       ...style,
       fontSize: '12px',
       color: '#8a5a66',
