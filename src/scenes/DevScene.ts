@@ -90,6 +90,7 @@ export class DevScene extends Phaser.Scene {
       { label: `Nesmrteľnosť: ${devFlags.god ? 'ZAP' : 'vyp'}`, run: () => (devFlags.god = !devFlags.god) },
     ];
     if (base !== undefined) {
+      list.push({ label: 'Kancelárska udalosť (náhodná)', run: () => base.triggerOfficeEvent() });
       for (const depth of [1, 4, 5, 10]) list.push({ label: `Expedícia: poschodie ${depth}${depth % 5 === 0 ? ' (CEO)' : ''}`, run: () => base.depart(depth) });
     }
     if (exp !== undefined) {

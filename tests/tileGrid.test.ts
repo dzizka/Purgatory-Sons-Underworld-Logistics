@@ -125,3 +125,19 @@ describe('herné mapy', () => {
     expect(grid.isBlocked(BASE_ELEVATOR_ARRIVAL.x, BASE_ELEVATOR_ARRIVAL.y)).toBe(false);
   });
 });
+
+describe('dekorácie kancelárie', () => {
+  it('stoja na podlahe, nie v ceste k výťahu ani na miestach v čakárni', async () => {
+    const { BASE_DECOR, BASE_ELEVATOR_ARRIVAL, LOUNGE_SPOTS, PROCESSING_OFFICE } = await import('@/world/maps');
+    const m = parseMap(PROCESSING_OFFICE);
+    const keys = new Set(BASE_DECOR.map((d) => `${d.tx},${d.ty}`));
+    expect(keys.size).toBe(BASE_DECOR.length);
+    for (const d of BASE_DECOR) {
+      expect(m.grid.get(d.tx, d.ty), `${d.kind} (${d.tx}, ${d.ty})`).toBe('floor');
+      expect(Math.hypot(d.tx - m.spawn.x, d.ty - m.spawn.y)).toBeGreaterThan(1.5);
+    }
+    for (const e of m.elevators) expect(keys.has(`${e.tx},${e.ty}`)).toBe(false);
+    expect(keys.has(`${BASE_ELEVATOR_ARRIVAL.x},${BASE_ELEVATOR_ARRIVAL.y}`)).toBe(false);
+    for (const s of LOUNGE_SPOTS) expect(keys.has(`${Math.round(s.x)},${Math.round(s.y)}`)).toBe(false);
+  });
+});

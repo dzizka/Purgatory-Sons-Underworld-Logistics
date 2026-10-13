@@ -16,6 +16,8 @@ export interface CycleResult {
 export interface FatigueResult {
   /** Koľko šálok sa vypilo. */
   readonly coffeeBreaks: number;
+  /** Kto si práve dal kávu (pre animáciu prestávky). */
+  readonly drinkers: readonly SinnerState[];
   /** Kto práve dosiahol 100 % únavy. */
   readonly burnedOut: readonly SinnerState[];
 }
@@ -52,6 +54,7 @@ export function buildingRate(state: GameState, b: BuildingState): number {
 export function tickFatigue(state: GameState, dtMs: number): FatigueResult {
   let coffeeBreaks = 0;
   const burnedOut: SinnerState[] = [];
+  const drinkers: SinnerState[] = [];
   const buildingIds = new Set(state.buildings.map((b) => b.id));
   for (const s of state.sinners) {
     const working = s.role === 'worker' && s.assignedTo !== null && buildingIds.has(s.assignedTo);
@@ -65,11 +68,12 @@ export function tickFatigue(state: GameState, dtMs: number): FatigueResult {
       state.resources.coffee -= 1;
       s.fatigue = 0;
       coffeeBreaks += 1;
+      drinkers.push(s);
     } else if (before < 1 && s.fatigue >= 1) {
       burnedOut.push(s);
     }
   }
-  return { coffeeBreaks, burnedOut };
+  return { coffeeBreaks, burnedOut, drinkers };
 }
 
 /**

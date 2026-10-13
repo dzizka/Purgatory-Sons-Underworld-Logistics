@@ -45,6 +45,8 @@ Nepriatelia pred úderom zastanú a pod nimi sa rozsvieti červený výsek – v
 **Ekonomika:** Podateľňa → Duše · Kávovar → Káva · Kopírka: Duša → 3 Formuláre · Mučiareň: Duša + 2 Formuláre + Káva → 6 Síry · Školiaca miestnosť: Káva → XP.
 Vlastnosti hriešnikov (Workoholik, Prokrastinátor, Mikromanažér, Introvert…) menia výkon; skúsenosti zvyšujú úroveň (+10 % / level, najviac úroveň 10).
 
+**Život v kancelárii:** hriešnici komentujú prácu v bublinách (podľa budovy, únavy a povahy), chodia si po kávu ku kávovaru, ponevierajú sa v čakárni, vyhorení zošednú a pri povýšení poskočia. Občas sa stane kancelárska udalosť – zaseknutá kopírka, požiarne cvičenie, e-mail od vedenia s prílohou na 400 strán…
+
 **Typy hriešnikov:** okrem úradníka sa postupom odomykajú **Stážista** (po 5 zabitiach – lacný, pomalší, učí sa 2×), **Barista** (po 3 výpravách – kávovar +80 %, pomalšie sa unavuje), **Účtovník** (po návrate z 3. poschodia – podateľňa a kopírka +50 %) a **Firemný právnik** (po porážke CEO – mučiareň +60 %, kolegovia +10 %). Vlastnosti sa k typom pridávajú náhodne.
 
 **Denné kvóty od vedenia:** každý deň (o polnoci miestneho času) tri nové ciele – vyrobiť suroviny, vybaviť reklamácie či konkrétny typ nepriateľa, vrátiť sa z rekordného poschodia, nabrať hriešnikov, skartovať predmety, poraziť CEO. Ponúka sa len to, čo už hráč vie splniť, a ciele aj odmeny rastú s hĺbkou. Z expedície sa ráta iba živý návrat. Všetky tri = **Zamestnanec dňa** (bonus a predmet); séria dní po sebe zvyšuje všetky odmeny o 10 % za deň (najviac +50 %).

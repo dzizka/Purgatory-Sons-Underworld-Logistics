@@ -17,6 +17,8 @@ export class SinnerView {
   private readonly texture: (typeof SINNER_TEXTURES)[number];
   private tween: Phaser.Tweens.Tween | null = null;
   private facing: Facing = 'S';
+  private selected = false;
+  private tired = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -32,13 +34,14 @@ export class SinnerView {
   }
 
   /** Dôjde na miesto; po príchode sa otočí k `lookAt` a začne pracovať (ak `working`). */
-  goTo(target: Vec2, lookAt: Vec2 | null, working: boolean): void {
+  goTo(target: Vec2, lookAt: Vec2 | null, working: boolean, onArrive?: () => void): void {
     this.tween?.stop();
     const from = { x: this.sprite.worldX, y: this.sprite.worldY };
     const dist = Math.hypot(target.x - from.x, target.y - from.y);
     const finish = (): void => {
       if (lookAt !== null) this.face(lookAt);
       this.play(working ? 'work' : 'idle');
+      onArrive?.();
     };
     if (dist < 0.01) {
       finish();
@@ -60,8 +63,38 @@ export class SinnerView {
     });
   }
 
+  /** Momentálne ide niekam (prestávka, presun) – vtedy ho nevyrušujeme ďalšími presunmi. */
+  get walking(): boolean {
+    return this.tween?.isPlaying() === true;
+  }
+
   setSelected(selected: boolean): void {
-    this.sprite.setTint(selected ? 0xffe08a : 0xffffff);
+    this.selected = selected;
+    this.applyTint();
+  }
+
+  /** Vyhorený hriešnik zošedne. */
+  setTired(tired: boolean): void {
+    if (this.tired === tired) return;
+    this.tired = tired;
+    this.applyTint();
+  }
+
+  /** Radostný poskok (povýšenie, narodeniny). */
+  hop(times = 2): void {
+    this.scene.tweens.add({
+      targets: this.sprite,
+      y: this.sprite.y - 8,
+      duration: 120,
+      yoyo: true,
+      repeat: times - 1,
+      ease: 'Quad.Out',
+      onComplete: () => this.sprite.syncToWorld(),
+    });
+  }
+
+  private applyTint(): void {
+    this.sprite.setTint(this.selected ? 0xffe08a : this.tired ? 0x9aa0b8 : 0xffffff);
   }
 
   destroy(): void {

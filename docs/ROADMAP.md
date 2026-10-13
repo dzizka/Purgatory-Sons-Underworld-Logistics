@@ -202,6 +202,21 @@ Každá fáza = samostatný PR do `main`, po merge sa automaticky nasadí na Git
 - Podlaha kancelárie: SBS drevené parkety (CC0), stmavené
 - Import automatizovaný v `tools/import_assets.py` (zmenšenie, tvrdé okraje, stmavenie, orezanie dlaždíc)
 
+## Fáza 14 – Život na základni ✅
+**Cieľ:** kancelária žije aj keď hráč nič nerobí.
+
+- **Bubliny s replikami** – podľa situácie (práca v konkrétnej budove, čakáreň, únava, vedúci, strop úrovne) a osobnosti (vlastnosti, typ hriešnika); manažér si po 25 s nečinnosti tiež povzdychne
+- **Kávová prestávka** – kto si vezme kávu zo skladu, dôjde ku kávovaru a potom späť
+- Nepridelení sa **ponevierajú** po čakárni; vyhorení **zošednú**; pri povýšení **poskočia**
+- Budova pri každom cykle **„dýchne“** a vyletí z nej, čo vyrobila (+1 D, +3 F…)
+- **Kancelárske udalosti** každé 1–2 minúty (zaseknutá kopírka, požiarne cvičenie, e-mail od vedenia, narodeniny, pondelok, došli filtre, audit, teambuilding) – kozmetické, s replikami a efektmi; v dev menu „Kancelárska udalosť“
+- **Dekorácie** kancelárie (Kenney): kvetiny, koše, vešiak, chladnička, televízor, gauč v čakárni, rádio, regál – prekážky, nedá sa na ne stavať
+
+**Definition of Done**
+- [x] Repliky zodpovedajú stavu hriešnika (testy)
+- [x] Udalosti sa neopakujú dvakrát po sebe a vyžadujú svoju budovu (test)
+- [x] Dekorácie neblokujú výťah, spawn ani miesta v čakárni (test)
+
 ---
 
 ## Backlog (po MVP)
